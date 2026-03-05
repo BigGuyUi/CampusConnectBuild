@@ -1,13 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "ReZDN+2gjbk=",
+  "dgSpecHash": "SnI3jAQpU08=",
   "success": true,
-  "projectFilePath": "C:\\Users\\aiden\\source\\repos\\CampusConnect\\CampusConnect\\CampusConnect.csproj",
-  "expectedPackageFiles": [
-    "C:\\Users\\aiden\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.23\\microsoft.windowsdesktop.app.ref.8.0.23.nupkg.sha512",
-    "C:\\Users\\aiden\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.23\\microsoft.netcore.app.ref.8.0.23.nupkg.sha512",
-    "C:\\Users\\aiden\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.23\\microsoft.aspnetcore.app.ref.8.0.23.nupkg.sha512",
-    "C:\\Users\\aiden\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.23\\microsoft.netcore.app.host.win-x64.8.0.23.nupkg.sha512"
-  ],
+  "projectFilePath": "C:\\Users\\767208\\Source\\Repos\\CampusConnectBuild\\CampusConnect\\CampusConnect.csproj",
+  "expectedPackageFiles": [],
   "logs": []
 }
