@@ -1,14 +1,323 @@
 @page "/Chats"
-@using CampusConnect.Components.Shared
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Security.Claims
+@using CampusConnect.Models
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Authorization
+@inject CampusConnect.Services.IChatService ChatService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILoggerFactory LoggerFactory
 
 <PageTitle>Chats</PageTitle>
 
-<h1>Chats</h1>
+<div class="chats-root">
+    <aside class="chat-list-panel" role="navigation" aria-label="Chat list">
+        <!-- Nav menu: quick access to chats (uses chatList populated from DB) -->
+        <nav class="chat-nav" aria-label="Chats navigation">
+            <ul>
+                @foreach (var c in chatList)
+                {
+                    <li class="chat-nav-item @(SelectedChat?.Id == c.Id ? "active" : "")">
+                        <button class="nav-button" @onclick="() => SelectChatAsync(c.Id)" aria-current="@(SelectedChat?.Id == c.Id ? "true" : "false")">
+                            @c.Name
+                        </button>
+                    </li>
+                }
+            </ul>
+        </nav>
 
-<div class="top-row px-4">
-    <Search_Bar />
+        <div class="chat-search-area">
+            <input class="chat-search" @bind="SearchText" placeholder="SEARCH CHATS..." aria-label="Search chats" />
+        </div>
+
+        <div class="chat-list-scroll" role="list">
+            @if (isLoading)
+            {
+                <div class="empty">Loading…</div>
+            }
+            else if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="empty error">Sorry — could not load chats. (@errorMessage)</div>
+            }
+            else if (!DisplayedChats.Any())
+            {
+                <div class="empty">No chats</div>
+            }
+            else
+            {
+                @foreach (var c in DisplayedChats)
+                {
+                    <div class="chat-item @(SelectedChat?.Id == c.Id ? "active" : "")" role="button" @onclick="() => SelectChatAsync(c.Id)">
+                        <div class="chat-item-top">
+                            <div class="chat-item-name">@c.Name</div>
+                            <div class="chat-item-time">@FormatRelative(c.LastMessageTime)</div>
+                        </div>
+
+                        <div class="chat-item-bottom">
+                            <div class="chat-item-preview">@c.LastMessage</div>
+                            @if (c.UnreadCount > 0)
+                            {
+                                <div class="chat-item-badge" aria-label="@($"{c.UnreadCount} unread")">@c.UnreadCount</div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </aside>
+
+    <main class="message-area" role="main">
+        @if (SelectedChat is null)
+        {
+            <div class="placeholder">Select a chat to view messages</div>
+        }
+        else
+        {
+            <header class="message-header">
+                <div class="group-name">@SelectedChat.Name</div>
+                <div class="group-date">Today</div>
+            </header>
+
+            <section class="messages-container" role="log" aria-live="polite">
+                @if (SelectedChat.Messages == null || !SelectedChat.Messages.Any())
+                {
+                    <div class="date-divider">No messages yet</div>
+                }
+                else
+                {
+                    @foreach (var msg in SelectedChat.Messages)
+                    {
+                        <article class="message-bubble @(msg.IsMine ? "own" : "")" @key="msg.Id">
+                            <div class="message-sender">@msg.Sender</div>
+                            <div class="message-text">@msg.Text</div>
+                            <div class="message-timestamp">@msg.SentAt.ToLocalTime().ToString("t")</div>
+                        </article>
+                    }
+                }
+            </section>
+
+            <footer class="message-input-bar">
+                <input class="message-input" @bind="NewMessage" @onkeydown="HandleKeyDown" placeholder="Type a message..." aria-label="Type a message" />
+                <button class="send-button" @onclick="SendMessageAsync" title="Send" aria-label="Send message">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z" /></svg>
+                </button>
+            </footer>
+        }
+    </main>
 </div>
 
 @code {
+    ILogger _logger;
 
+    // lightweight UI wrapper used only by this component
+    class UiChat
+    {
+        public int Id { get; set; }
+        public int? SocietyId { get; set; }
+        public string Name { get; set; } = "";
+        public string LastMessage { get; set; } = "";
+        public DateTime? LastMessageTime { get; set; }
+        public int UnreadCount { get; set; }
+        public List<MessageDto> Messages { get; set; } = new();
+        public bool MessagesLoaded { get; set; } = false;
+    }
+
+    List<UiChat> chatList = new();
+    UiChat? SelectedChat;
+    string NewMessage = "";
+    string SearchText = "";
+    int CurrentUserId = 3; // changed default to a regular student (3) so chats appear in dev/testing
+    int _tempMessageId = -1;
+
+    bool isLoading = false;
+    string? errorMessage;
+
+    // simple societies menu default (DB may not provide names)
+    class SocietyOption { public int? Id { get; set; } public string Name { get; set; } = ""; }
+    List<SocietyOption> Societies = new() { new SocietyOption { Id = null, Name = "Default" } };
+    int? SelectedSocietyId = null;
+
+    IEnumerable<UiChat> DisplayedChats => string.IsNullOrWhiteSpace(SearchText)
+        ? (SelectedSocietyId == null ? chatList : chatList.Where(c => c.SocietyId == SelectedSocietyId))
+        : (SelectedSocietyId == null
+            ? chatList.Where(c => c.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || c.LastMessage.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+            : chatList.Where(c => c.SocietyId == SelectedSocietyId && (c.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || c.LastMessage.Contains(SearchText, StringComparison.OrdinalIgnoreCase))));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _logger = LoggerFactory.CreateLogger("Chats");
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            // try to obtain the authenticated user's id from claims (if available)
+            var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = user.FindFirst(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+                if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                {
+                    CurrentUserId = uid;
+                }
+            }
+
+            await LoadChatsAsync();
+
+            if (!chatList.Any())
+            {
+                errorMessage = $"No chats found for user id {CurrentUserId}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "OnInitializedAsync failed");
+            errorMessage = ex.Message;
+            chatList = new List<UiChat>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    async Task LoadChatsAsync()
+    {
+        var svc = await ChatService.GetUserChatsAsync(CurrentUserId);
+        chatList = svc?.Select(s => new UiChat
+        {
+            Id = s.Id,
+            SocietyId = s.SocietyId,
+            Name = s.Name,
+            LastMessage = s.LastMessage,
+            UnreadCount = s.UnreadCount,
+            Messages = new List<MessageDto>(),
+            LastMessageTime = null
+        }).ToList() ?? new List<UiChat>();
+
+        // Limit concurrency when fetching last messages to avoid exhausting DB connections
+        const int maxConcurrency = 5;
+        using var sem = new SemaphoreSlim(maxConcurrency);
+        var tasks = chatList.Select(async c =>
+        {
+            await sem.WaitAsync();
+            try
+            {
+                try
+                {
+                    var msgs = await ChatService.GetChatMessagesAsync(c.Id, CurrentUserId);
+                    if (msgs?.Any() == true)
+                    {
+                        var last = msgs.Last();
+                        c.LastMessageTime = last.SentAt;
+                        c.LastMessage = !string.IsNullOrWhiteSpace(last.Text) ? last.Text : c.LastMessage;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load preview messages for chat {ChatId}", c.Id);
+                }
+            }
+            finally
+            {
+                sem.Release();
+            }
+        }).ToArray();
+
+        await Task.WhenAll(tasks);
+
+        if (chatList.Any())
+        {
+            await SelectChatAsync(chatList.First().Id);
+        }
+    }
+
+    void SelectSociety(int? societyId)
+    {
+        SelectedSocietyId = societyId;
+        SelectedChat = null;
+    }
+
+    async Task SelectChatAsync(int chatId)
+    {
+        SelectedChat = chatList.FirstOrDefault(c => c.Id == chatId);
+        if (SelectedChat != null)
+        {
+            if (!SelectedChat.MessagesLoaded)
+            {
+                try
+                {
+                    var msgs = await ChatService.GetChatMessagesAsync(chatId, CurrentUserId);
+                    SelectedChat.Messages = msgs ?? new List<MessageDto>();
+                    SelectedChat.MessagesLoaded = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load messages for chat {ChatId}", chatId);
+                    errorMessage = "Failed to load messages: " + ex.Message;
+                    SelectedChat.Messages = new List<MessageDto>();
+                }
+            }
+            SelectedChat.UnreadCount = 0;
+            StateHasChanged();
+        }
+    }
+
+    async Task SendMessageAsync()
+    {
+        if (SelectedChat is null || string.IsNullOrWhiteSpace(NewMessage))
+            return;
+
+        var temp = new MessageDto
+        {
+            Id = _tempMessageId--,
+            Sender = "You",
+            Text = NewMessage.Trim(),
+            SentAt = DateTime.UtcNow,
+            IsMine = true
+        };
+
+        SelectedChat.Messages.Add(temp);
+        SelectedChat.LastMessage = temp.Text;
+        SelectedChat.LastMessageTime = temp.SentAt;
+        NewMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var ok = await ChatService.SendMessageAsync(SelectedChat.Id, CurrentUserId, temp.Text);
+            if (!ok)
+            {
+                _logger.LogWarning("SendMessageAsync returned false for chat {ChatId}", SelectedChat.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SendMessageAsync failed for chat {ChatId}", SelectedChat.Id);
+            // optimistic UI: consider showing failure indicator
+        }
+    }
+
+    void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _ = SendMessageAsync();
+        }
+    }
+
+    string FormatRelative(DateTime? time)
+    {
+        if (time is null || time == DateTime.MinValue) return "";
+        var span = DateTime.UtcNow - time.Value.ToUniversalTime();
+        if (span.TotalSeconds < 60) return $"{(int)span.TotalSeconds}s ago";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        return time.Value.ToLocalTime().ToString("MMM d");
+    }
 }
