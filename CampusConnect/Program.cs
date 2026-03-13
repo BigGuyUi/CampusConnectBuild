@@ -1,10 +1,14 @@
 using CampusConnect.Components;
+using CampusConnect.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Register chat service (uses DefaultConnection from configuration)
+builder.Services.AddScoped<IChatService, ChatService>();
 
 var app = builder.Build();
 
