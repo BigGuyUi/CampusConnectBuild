@@ -48,27 +48,27 @@ INSERT INTO Posts (SocietyID, Title, Text, Image, PostTime) VALUES
 (5,'Photo Walk','Photography walk this week.',NULL,GETDATE()-3),
 (5,'Competition','Submit your best shots!',NULL,GETDATE()-1);
 
-INSERT INTO PostResponses (ResponseID, PostID, UserID, Text) VALUES
-(DEFAULT,1,2,'Sounds great!'),
-(DEFAULT,1,3,'I will be there.'),
-(DEFAULT,2,1,'Awesome!'),
-(DEFAULT,2,3,'Can’t wait.'),
-(DEFAULT,3,4,'Exciting.'),
-(DEFAULT,3,5,'Count me in.'),
-(DEFAULT,4,5,'Nice!'),
-(DEFAULT,4,3,'I''m joining.'),
-(DEFAULT,5,1,'Cool tournament.'),
-(DEFAULT,5,6,'Ready!'),
-(DEFAULT,6,4,'LAN!!!!!'),
-(DEFAULT,6,1,'Let’s go.'),
-(DEFAULT,7,2,'Fun hike!'),
-(DEFAULT,7,7,'Joining!'),
-(DEFAULT,8,5,'I have boots.'),
-(DEFAULT,8,7,'All good.'),
-(DEFAULT,9,6,'Great walk.'),
-(DEFAULT,9,7,'Taking photos.'),
-(DEFAULT,10,8,'I''m entering!'),
-(DEFAULT,10,6,'Good luck everyone.');
+INSERT INTO PostResponses (PostID, UserID, Text) VALUES
+(1,2,'Sounds great!'),
+(,1,3,'I will be there.'),
+(,2,1,'Awesome!'),
+(,2,3,'Can’t wait.'),
+(,3,4,'Exciting.'),
+(,3,5,'Count me in.'),
+(,4,5,'Nice!'),
+(,4,3,'I''m joining.'),
+(,5,1,'Cool tournament.'),
+(,5,6,'Ready!'),
+(,6,4,'LAN!!!!!'),
+(,6,1,'Let’s go.'),
+(,7,2,'Fun hike!'),
+(,7,7,'Joining!'),
+(,8,5,'I have boots.'),
+(,8,7,'All good.'),
+(,9,6,'Great walk.'),
+(,9,7,'Taking photos.'),
+(,10,8,'I''m entering!'),
+(,10,6,'Good luck everyone.');
 
 INSERT INTO Chats (SocietyID, ChatName) VALUES
 (1,'cs-general'),
