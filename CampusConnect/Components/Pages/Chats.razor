@@ -114,6 +114,7 @@
 </div>
 
 @code {
+
     ILogger _logger;
 
     class UiChat
@@ -354,7 +355,7 @@
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SendMessageAsync failed for chat {ChatId}", SelectedChat.Id);
+            _logger.LogError(ex, "SendMessageAsync failed for chat {ChatId}", SelectedChat.Id); ;
         }
     }
 
