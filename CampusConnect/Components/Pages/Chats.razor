@@ -8,9 +8,11 @@
 @using CampusConnect.Models
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
 @inject CampusConnect.Services.IChatService ChatService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ILoggerFactory LoggerFactory
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Chats</PageTitle>
 
@@ -22,7 +24,7 @@
                 @foreach (var c in chatList)
                 {
                     <li class="chat-nav-item @(SelectedChat?.Id == c.Id ? "active" : "")">
-                        <button class="nav-button" @onclick="() => SelectChatAsync(c.Id)" aria-current="@(SelectedChat?.Id == c.Id ? "true" : "false")">
+                        <button type="button" class="nav-button" @onclick="async () => await SelectChatAsync(c.Id)" aria-current="@(SelectedChat?.Id == c.Id ? "true" : "false")">
                             @c.Name
                         </button>
                     </li>
@@ -37,11 +39,11 @@
         <div class="chat-list-scroll" role="list">
             @if (isLoading)
             {
-                <div class="empty">Loading…</div>
+                <div class="empty">Loading?</div>
             }
             else if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="empty error">Sorry — could not load chats. (@errorMessage)</div>
+                <div class="empty error">Sorry ? could not load chats. (@errorMessage)</div>
             }
             else if (!DisplayedChats.Any())
             {
@@ -82,7 +84,7 @@
                 <div class="group-date">Today</div>
             </header>
 
-            <section class="messages-container" role="log" aria-live="polite">
+            <section id="messages-container" class="messages-container" role="log" aria-live="polite" @ref="messagesContainerRef">
                 @if (SelectedChat.Messages == null || !SelectedChat.Messages.Any())
                 {
                     <div class="date-divider">No messages yet</div>
@@ -98,11 +100,12 @@
                         </article>
                     }
                 }
+                <div id="messages-end" @ref="messagesEndRef"></div>
             </section>
 
             <footer class="message-input-bar">
-                <input class="message-input" @bind="NewMessage" @onkeydown="HandleKeyDown" placeholder="Type a message..." aria-label="Type a message" />
-                <button class="send-button" @onclick="SendMessageAsync" title="Send" aria-label="Send message">
+                <input id="message-input" class="message-input" @bind="NewMessage" @onkeydown="HandleKeyDown" placeholder="Type a message..." aria-label="Type a message" @ref="messageInputRef" />
+                <button class="send-button" @onclick="SendMessageAsync" title="Send" aria-label="Send message" disabled="@string.IsNullOrWhiteSpace(NewMessage)">
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z" /></svg>
                 </button>
             </footer>
@@ -140,6 +143,10 @@
     class SocietyOption { public int? Id { get; set; } public string Name { get; set; } = ""; }
     List<SocietyOption> Societies = new() { new SocietyOption { Id = null, Name = "Default" } };
     int? SelectedSocietyId = null;
+
+    ElementReference messagesContainerRef;
+    ElementReference messagesEndRef;
+    ElementReference messageInputRef;
 
     IEnumerable<UiChat> DisplayedChats => string.IsNullOrWhiteSpace(SearchText)
         ? (SelectedSocietyId == null ? chatList : chatList.Where(c => c.SocietyId == SelectedSocietyId))
@@ -265,6 +272,11 @@
             }
             SelectedChat.UnreadCount = 0;
             StateHasChanged();
+
+            // give Blazor a moment to render then scroll/focus
+            await Task.Delay(50);
+            await ScrollMessagesToBottomAsync();
+            await FocusMessageInputAsync();
         }
     }
 
@@ -288,6 +300,11 @@
         NewMessage = "";
         StateHasChanged();
 
+        // scroll to show the optimistic message and refocus input
+        await Task.Delay(50);
+        await ScrollMessagesToBottomAsync();
+        await FocusMessageInputAsync();
+
         try
         {
             var ok = await ChatService.SendMessageAsync(SelectedChat.Id, CurrentUserId, temp.Text);
@@ -299,7 +316,7 @@
         catch (Exception ex)
         {
             _logger.LogError(ex, "SendMessageAsync failed for chat {ChatId}", SelectedChat.Id);
-            // optimistic UI: consider showing failure indicator
+            // optimistic UI: consider marking message as failed
         }
     }
 
@@ -308,6 +325,30 @@
         if (e.Key == "Enter")
         {
             _ = SendMessageAsync();
+        }
+    }
+
+    async Task ScrollMessagesToBottomAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("chatHelpers.scrollToBottom", messagesContainerRef);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "ScrollMessagesToBottomAsync failed");
+        }
+    }
+
+    async Task FocusMessageInputAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("chatHelpers.focusElement", messageInputRef);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "FocusMessageInputAsync failed");
         }
     }
 
