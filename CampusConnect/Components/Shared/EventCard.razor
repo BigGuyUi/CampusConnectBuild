@@ -1,0 +1,50 @@
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Nav
+
+<div class="card border-dark h-100">
+    <div class="card-body d-flex flex-column">
+        <h3 class="card-title h6 mb-1">@Title</h3>
+
+        @if (!string.IsNullOrWhiteSpace(SocietyName))
+        {
+            <div class="text-muted small mb-2">@SocietyName</div>
+        }
+
+        <div class="text-muted mb-3">@Date</div>
+
+        <div class="mt-auto d-flex justify-content-between">
+            @if (ChildContent is not null)
+            {
+                @ChildContent
+            }
+
+            <!-- progressive-enhanced link:
+                 - works as a normal anchor when Blazor event wiring is broken
+                 - when Blazor is active it will call Nav.NavigateTo to avoid full reload -->
+            <a
+                class="btn btn-sm btn-dark"
+                href="@($"/Events/{EventId}")"
+                role="button"
+                @onclick="NavigateToDetails"
+                @onclick:preventDefault="true">
+                View
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Date { get; set; } = "";
+    [Parameter] public string SocietyName { get; set; } = "";
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    void NavigateToDetails()
+    {
+        if (EventId > 0)
+        {
+            Nav.NavigateTo($"/Events/{EventId}");
+        }
+    }
+}
