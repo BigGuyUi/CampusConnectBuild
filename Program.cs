@@ -13,7 +13,6 @@ builder.Services.AddScoped<IEventService, EventService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -23,16 +22,13 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// Routing must be enabled before antiforgery middleware
+// Routing must be enabled
 app.UseRouting();
 
-// Antiforgery middleware must appear between UseRouting and endpoint mapping
+// Antiforgery middleware must be between UseRouting and endpoint mapping
 app.UseAntiforgery();
 
-// (If you add authentication/authorization, call them before UseAntiforgery)
-// app.UseAuthentication();
-// app.UseAuthorization();
-
+// Map interactive server components
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
