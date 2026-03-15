@@ -11,28 +11,26 @@
 
 <PageTitle>Events</PageTitle>
 
-<div class="events-root d-flex flex-column h-100">
-    <div class="p-4 border-bottom">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h2 class="h4 mb-0">ALL EVENTS</h2>
+<div class="events-root">
+    <header class="events-header">
+        <div class="events-header-left">
+            <h2 class="events-title">All Events</h2>
+            <p class="events-sub">Upcoming campus events and society activities</p>
+        </div>
 
-            <div class="position-relative" style="max-width:520px; width:100%;">
-                <input class="form-control text-uppercase" placeholder="SEARCH..." @bind="SearchQuery" />
-                <span class="position-absolute" style="left:10px; top:50%; transform:translateY(-50%); pointer-events:none;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </span>
-                <style>
-                    input.form-control { padding-left:36px; }
-                </style>
+        <div class="events-header-right">
+            <div class="search-wrap">
+                <input class="search-input" placeholder="Search events..." @bind="SearchQuery" />
+            </div>
+            <div class="actions">
+                <button class="btn btn-outline-primary">Create Event</button>
+                <button class="btn btn-outline-secondary">Make Announcement</button>
             </div>
         </div>
-    </div>
+    </header>
 
-    <div class="flex-grow-1 p-4 overflow-auto">
-        <div class="events-grid d-grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1rem; max-width:1024px;">
+    <section class="events-body">
+        <div class="events-grid">
             @foreach (var evt in FilteredEvents)
             {
                 <EventCard EventId="@evt.Id" Title="@evt.Title" Date="@evt.DateDisplay" SocietyName="@evt.SocietyName" />
@@ -41,39 +39,25 @@
 
         @if (!FilteredEvents.Any())
         {
-            <p class="text-muted text-center mt-4">No events found</p>
+            <div class="empty-state">
+                <h4>No events found</h4>
+                <p class="text-muted">Try adjusting your search or check back later.</p>
+            </div>
         }
-    </div>
-
-    <div class="p-3 border-top bg-white">
-        <div class="d-flex gap-2" style="max-width:1024px;">
-            <button type="button" class="btn btn-outline-dark flex-fill py-3">Create Event</button>
-            <button type="button" class="btn btn-outline-dark flex-fill py-3">Make Announcement</button>
-        </div>
-    </div>
-</div>
-
-@* add this near the top (temporary debug) *@
-<div class="mb-3">
-    <button class="btn btn-sm btn-primary me-2" @onclick="TestClick">Test Click</button>
-    <span class="small text-muted">Test clicks: @testClicks</span>
+    </section>
 </div>
 
 @code {
     string SearchQuery { get; set; } = "";
     List<EventDto> Eventss { get; set; } = new List<EventDto>();
 
-    int testClicks = 0;
-
     IEnumerable<EventDto> FilteredEvents =>
         string.IsNullOrWhiteSpace(SearchQuery)
             ? Eventss
-            : Eventss.Where(e => e.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+            : Eventss.Where(e => e.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || (e.SocietyName ?? "").Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
         Eventss = await EventService.GetEventsAsync();
     }
-
-    void TestClick() => testClicks++;
 }
