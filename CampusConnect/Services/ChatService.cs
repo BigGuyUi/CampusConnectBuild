@@ -30,12 +30,10 @@ namespace CampusConnect.Services
             var list = new List<ChatSummary>();
             const string sql = @"
 SELECT c.ChatID, c.SocietyID, c.ChatName,
-       ISNULL((SELECT TOP (1) m.Text FROM Message m WHERE m.ChatID = c.ChatID ORDER BY m.PostTime DESC), '') AS LastMessage
+       (SELECT TOP (1) m.Text FROM Messages m WHERE m.ChatID = c.ChatID ORDER BY m.PostTime DESC) AS LastMessage
 FROM Chats c
-JOIN ChatMembers cm ON c.ChatID = cm.ChatID
-JOIN SocietyMembers s ON cm.MembersID = s.MembersID
-JOIN Users u ON s.StudentID = u.UserID
-WHERE u.UserID = @userId
+WHERE EXISTS (SELECT 1 FROM ChatMembers cm WHERE cm.ChatID = c.ChatID AND cm.UserID = @userId)
+   OR EXISTS (SELECT 1 FROM SocietyMembers sm WHERE sm.SocietyID = c.SocietyID AND sm.UserID = @userId)
 ORDER BY c.ChatID;
 ";
 
@@ -72,9 +70,9 @@ ORDER BY c.ChatID;
         {
             var messages = new List<MessageDto>();
             const string sql = @"
-SELECT m.MessageID, u.Name, m.Text, m.PostTime, m.SenderID
-FROM Message m
-JOIN Users u ON m.SenderID = u.UserID
+SELECT m.MessageID, u.Name, m.Text, m.PostTime, m.UserID
+FROM Messages m
+JOIN Users u ON m.UserID = u.UserID
 WHERE m.ChatID = @chatId
 ORDER BY m.PostTime;
 ";
@@ -117,8 +115,8 @@ ORDER BY m.PostTime;
         public async Task<bool> SendMessageAsync(int chatId, int userId, string text, CancellationToken cancellationToken = default)
         {
             const string sql = @"
-INSERT INTO Message (ChatID, SenderID, Text, Image, PostTime)
-VALUES (@chatId, @senderId, @text, NULL, @postTime);
+INSERT INTO Messages (ChatID, UserID, Text, Image, PostTime)
+VALUES (@chatId, @userId, @text, NULL, @postTime);
 ";
 
             try
@@ -126,7 +124,7 @@ VALUES (@chatId, @senderId, @text, NULL, @postTime);
                 await using var conn = CreateConnection();
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.Add(new SqlParameter("@chatId", SqlDbType.Int) { Value = chatId });
-                cmd.Parameters.Add(new SqlParameter("@senderId", SqlDbType.Int) { Value = userId });
+                cmd.Parameters.Add(new SqlParameter("@userId", SqlDbType.Int) { Value = userId });
                 // explicitly allow large text (NVARCHAR(MAX))
                 cmd.Parameters.Add(new SqlParameter("@text", SqlDbType.NVarChar, -1) { Value = text ?? string.Empty });
                 cmd.Parameters.Add(new SqlParameter("@postTime", SqlDbType.DateTime2) { Value = DateTime.UtcNow });
