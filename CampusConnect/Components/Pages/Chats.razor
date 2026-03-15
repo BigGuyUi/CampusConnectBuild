@@ -1,4 +1,5 @@
 @page "/Chats"
+@page "/Chats/{SelectedChatId:int}"
 @using System
 @using System.Collections.Generic
 @using System.Linq
@@ -6,6 +7,7 @@
 @using System.Threading.Tasks
 @using System.Security.Claims
 @using CampusConnect.Models
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.JSInterop
@@ -13,26 +15,14 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ILoggerFactory LoggerFactory
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>Chats</PageTitle>
 
 <div class="chats-root">
     <aside class="chat-list-panel" role="navigation" aria-label="Chat list">
-        <!-- Nav menu: quick access to chats (uses chatList populated from DB) -->
-        <nav class="chat-nav" aria-label="Chats navigation">
-            <ul>
-                @foreach (var c in chatList)
-                {
-                    <li class="chat-nav-item @(SelectedChat?.Id == c.Id ? "active" : "")">
-                        <button type="button" class="nav-button" @onclick="async () => await SelectChatAsync(c.Id)" aria-current="@(SelectedChat?.Id == c.Id ? "true" : "false")">
-                            @c.Name
-                        </button>
-                    </li>
-                }
-            </ul>
-        </nav>
-
-        <div class="chat-search-area">
+        <div class="chat-search-area d-flex align-items-center justify-content-between">
             <input class="chat-search" @bind="SearchText" placeholder="SEARCH CHATS..." aria-label="Search chats" />
         </div>
 
@@ -43,7 +33,7 @@
             }
             else if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="empty error">Sorry ? could not load chats. (@errorMessage)</div>
+                <div class="empty error">Sorry — could not load chats. (@errorMessage)</div>
             }
             else if (!DisplayedChats.Any())
             {
@@ -53,7 +43,17 @@
             {
                 @foreach (var c in DisplayedChats)
                 {
-                    <div class="chat-item @(SelectedChat?.Id == c.Id ? "active" : "")" role="button" @onclick="() => SelectChatAsync(c.Id)">
+                    <!-- progressive-enhanced link:
+                         - href navigates to /Chats/{id} so the page reloads and selects chat if JS is broken
+                         - when Blazor is active @onclick prevents default and selects chat client-side -->
+                    <a id="chat-@c.Id"
+                       class="chat-item @(SelectedChat?.Id == c.Id ? "active" : "")"
+                       href="@($"/Chats/{c.Id}")"
+                       @onclick="() => OnChatClickAsync(c.Id)"
+                       @onclick:preventDefault="true"
+                       role="button"
+                       tabindex="0"
+                       aria-pressed="@(SelectedChat?.Id == c.Id ? "true" : "false")">
                         <div class="chat-item-top">
                             <div class="chat-item-name">@c.Name</div>
                             <div class="chat-item-time">@FormatRelative(c.LastMessageTime)</div>
@@ -66,7 +66,7 @@
                                 <div class="chat-item-badge" aria-label="@($"{c.UnreadCount} unread")">@c.UnreadCount</div>
                             }
                         </div>
-                    </div>
+                    </a>
                 }
             }
         </div>
@@ -105,7 +105,7 @@
 
             <footer class="message-input-bar">
                 <input id="message-input" class="message-input" @bind="NewMessage" @onkeydown="HandleKeyDown" placeholder="Type a message..." aria-label="Type a message" @ref="messageInputRef" />
-                <button class="send-button" @onclick="SendMessageAsync" title="Send" aria-label="Send message" disabled="@string.IsNullOrWhiteSpace(NewMessage)">
+                <button type="button" class="send-button" @onclick="SendMessageAsync" title="Send" aria-label="Send message" disabled="@string.IsNullOrWhiteSpace(NewMessage)">
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z" /></svg>
                 </button>
             </footer>
@@ -116,7 +116,6 @@
 @code {
     ILogger _logger;
 
-    // lightweight UI wrapper used only by this component
     class UiChat
     {
         public int Id { get; set; }
@@ -133,20 +132,24 @@
     UiChat? SelectedChat;
     string NewMessage = "";
     string SearchText = "";
-    int CurrentUserId = 3; // changed default to a regular student (3) so chats appear in dev/testing
+    int CurrentUserId = 3;
     int _tempMessageId = -1;
 
     bool isLoading = false;
     string? errorMessage;
 
-    // simple societies menu default (DB may not provide names)
-    class SocietyOption { public int? Id { get; set; } public string Name { get; set; } = ""; }
-    List<SocietyOption> Societies = new() { new SocietyOption { Id = null, Name = "Default" } };
     int? SelectedSocietyId = null;
 
     ElementReference messagesContainerRef;
     ElementReference messagesEndRef;
     ElementReference messageInputRef;
+
+    // route parameter (set when navigating to /Chats/{id})
+    [Parameter]
+    public int? SelectedChatId { get; set; }
+
+    // if a param arrives before chats loaded, hold it
+    int? _pendingSelectedId;
 
     IEnumerable<UiChat> DisplayedChats => string.IsNullOrWhiteSpace(SearchText)
         ? (SelectedSocietyId == null ? chatList : chatList.Where(c => c.SocietyId == SelectedSocietyId))
@@ -162,7 +165,6 @@
 
         try
         {
-            // try to obtain the authenticated user's id from claims (if available)
             var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = auth.User;
             if (user.Identity?.IsAuthenticated == true)
@@ -176,9 +178,18 @@
 
             await LoadChatsAsync();
 
-            if (!chatList.Any())
+            // If route param was present, try to select now
+            if (SelectedChatId.HasValue)
             {
-                errorMessage = $"No chats found for user id {CurrentUserId}.";
+                if (chatList.Any(c => c.Id == SelectedChatId.Value))
+                {
+                    await SelectChatAsync(SelectedChatId.Value);
+                }
+                else
+                {
+                    // keep pending if chat list doesn't contain it yet
+                    _pendingSelectedId = SelectedChatId;
+                }
             }
         }
         catch (Exception ex)
@@ -190,6 +201,22 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // handle param changes (e.g. navigation to /Chats/{id})
+        if (SelectedChatId.HasValue)
+        {
+            if (chatList.Any(c => c.Id == SelectedChatId.Value))
+            {
+                await SelectChatAsync(SelectedChatId.Value);
+            }
+            else
+            {
+                _pendingSelectedId = SelectedChatId;
+            }
         }
     }
 
@@ -207,7 +234,6 @@
             LastMessageTime = null
         }).ToList() ?? new List<UiChat>();
 
-        // Limit concurrency when fetching last messages to avoid exhausting DB connections
         const int maxConcurrency = 5;
         using var sem = new SemaphoreSlim(maxConcurrency);
         var tasks = chatList.Select(async c =>
@@ -238,16 +264,30 @@
 
         await Task.WhenAll(tasks);
 
-        if (chatList.Any())
+        // if a param was pending, select it now
+        if (_pendingSelectedId.HasValue && chatList.Any(c => c.Id == _pendingSelectedId.Value))
+        {
+            await SelectChatAsync(_pendingSelectedId.Value);
+            _pendingSelectedId = null;
+        }
+
+        if (chatList.Any() && SelectedChat is null)
         {
             await SelectChatAsync(chatList.First().Id);
         }
     }
 
-    void SelectSociety(int? societyId)
+    async Task OnChatClickAsync(int chatId)
     {
-        SelectedSocietyId = societyId;
-        SelectedChat = null;
+        await SelectChatAsync(chatId);
+
+        // update browser URL to /Chats/{id} so fallback navigation matches selection
+        var baseUri = Nav.Uri.Split('#')[0].Split('?')[0];
+        var target = $"{baseUri.TrimEnd('/')}/{chatId}";
+        if (!Nav.Uri.EndsWith($"/{chatId}"))
+        {
+            Nav.NavigateTo(target, replace: false);
+        }
     }
 
     async Task SelectChatAsync(int chatId)
@@ -270,10 +310,10 @@
                     SelectedChat.Messages = new List<MessageDto>();
                 }
             }
+
             SelectedChat.UnreadCount = 0;
             StateHasChanged();
 
-            // give Blazor a moment to render then scroll/focus
             await Task.Delay(50);
             await ScrollMessagesToBottomAsync();
             await FocusMessageInputAsync();
@@ -300,7 +340,6 @@
         NewMessage = "";
         StateHasChanged();
 
-        // scroll to show the optimistic message and refocus input
         await Task.Delay(50);
         await ScrollMessagesToBottomAsync();
         await FocusMessageInputAsync();
@@ -316,7 +355,6 @@
         catch (Exception ex)
         {
             _logger.LogError(ex, "SendMessageAsync failed for chat {ChatId}", SelectedChat.Id);
-            // optimistic UI: consider marking message as failed
         }
     }
 
@@ -360,5 +398,10 @@
         if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
         if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
         return time.Value.ToLocalTime().ToString("MMM d");
+    }
+
+    public void Dispose()
+    {
+        // no LocationChanged subscription now
     }
 }
