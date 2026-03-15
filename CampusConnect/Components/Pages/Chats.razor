@@ -1,4 +1,5 @@
 @page "/Chats"
+@page "/Chats/{ChatId:int}"
 @using System
 @using System.Collections.Generic
 @using System.Linq
@@ -16,22 +17,10 @@
 
 <PageTitle>Chats</PageTitle>
 
+@* Styles moved to Chats.razor.css for clarity and to avoid mixing markup + CSS *@
+
 <div class="chats-root">
     <aside class="chat-list-panel" role="navigation" aria-label="Chat list">
-        <!-- Nav menu: quick access to chats (uses chatList populated from DB) -->
-        <nav class="chat-nav" aria-label="Chats navigation">
-            <ul>
-                @foreach (var c in chatList)
-                {
-                    <li class="chat-nav-item @(SelectedChat?.Id == c.Id ? "active" : "")">
-                        <button type="button" class="nav-button" @onclick="async () => await SelectChatAsync(c.Id)" aria-current="@(SelectedChat?.Id == c.Id ? "true" : "false")">
-                            @c.Name
-                        </button>
-                    </li>
-                }
-            </ul>
-        </nav>
-
         <div class="chat-search-area">
             <input class="chat-search" @bind="SearchText" placeholder="SEARCH CHATS..." aria-label="Search chats" />
         </div>
@@ -39,11 +28,11 @@
         <div class="chat-list-scroll" role="list">
             @if (isLoading)
             {
-                <div class="empty">Loading?</div>
+                <div class="empty">Loading…</div>
             }
             else if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="empty error">Sorry ? could not load chats. (@errorMessage)</div>
+                <div class="empty error">Sorry — could not load chats. (@errorMessage)</div>
             }
             else if (!DisplayedChats.Any())
             {
@@ -53,20 +42,23 @@
             {
                 @foreach (var c in DisplayedChats)
                 {
-                    <div class="chat-item @(SelectedChat?.Id == c.Id ? "active" : "")" role="button" @onclick="() => SelectChatAsync(c.Id)">
-                        <div class="chat-item-top">
-                            <div class="chat-item-name">@c.Name</div>
-                            <div class="chat-item-time">@FormatRelative(c.LastMessageTime)</div>
-                        </div>
+                    <NavLink class="@GetChatItemClass(c)" href="@($"/Chats/{c.Id}")" Match="NavLinkMatch.Prefix" aria-current="@(SelectedChat?.Id == c.Id ? "true" : "false")">
+                        <div class="avatar" aria-hidden="true">@GetInitials(c)</div>
+                        <div style="flex:1; min-width:0;">
+                            <div class="chat-item-top">
+                                <div class="chat-item-name">@c.Name</div>
+                                <div class="chat-item-time">@FormatRelative(c.LastMessageTime)</div>
+                            </div>
 
-                        <div class="chat-item-bottom">
-                            <div class="chat-item-preview">@c.LastMessage</div>
-                            @if (c.UnreadCount > 0)
-                            {
-                                <div class="chat-item-badge" aria-label="@($"{c.UnreadCount} unread")">@c.UnreadCount</div>
-                            }
+                            <div class="chat-item-bottom">
+                                <div class="chat-item-preview">@c.LastMessage</div>
+                                @if (c.UnreadCount > 0)
+                                {
+                                    <div class="chat-item-badge" aria-label="@($"{c.UnreadCount} unread")">@c.UnreadCount</div>
+                                }
+                            </div>
                         </div>
-                    </div>
+                    </NavLink>
                 }
             }
         </div>
@@ -75,19 +67,26 @@
     <main class="message-area" role="main">
         @if (SelectedChat is null)
         {
-            <div class="placeholder">Select a chat to view messages</div>
+            <div class="placeholder" style="padding:48px; color:#6b7280;">Select a chat to view messages</div>
         }
         else
         {
             <header class="message-header">
-                <div class="group-name">@SelectedChat.Name</div>
-                <div class="group-date">Today</div>
+                <div class="d-flex align-items-center" style="gap:12px;">
+                    <div class="avatar" aria-hidden="true">@GetInitials(SelectedChat)</div>
+                    <div>
+                        <div class="group-name">@SelectedChat.Name</div>
+                        <div class="group-date" style="font-size:12px;color:#6b7280;">Active</div>
+                    </div>
+                </div>
+
+                <div style="font-size:13px;color:#6b7280;">@FormatRelative(SelectedChat.LastMessageTime)</div>
             </header>
 
             <section id="messages-container" class="messages-container" role="log" aria-live="polite" @ref="messagesContainerRef">
                 @if (SelectedChat.Messages == null || !SelectedChat.Messages.Any())
                 {
-                    <div class="date-divider">No messages yet</div>
+                    <div class="date-divider" style="color:#6b7280">No messages yet</div>
                 }
                 else
                 {
@@ -116,6 +115,9 @@
 @code {
     ILogger _logger;
 
+    [Parameter]
+    public int? ChatId { get; set; }
+
     // lightweight UI wrapper used only by this component
     class UiChat
     {
@@ -133,15 +135,14 @@
     UiChat? SelectedChat;
     string NewMessage = "";
     string SearchText = "";
-    int CurrentUserId = 3; // changed default to a regular student (3) so chats appear in dev/testing
+    int CurrentUserId = 3;
     int _tempMessageId = -1;
 
     bool isLoading = false;
     string? errorMessage;
 
-    // simple societies menu default (DB may not provide names)
     class SocietyOption { public int? Id { get; set; } public string Name { get; set; } = ""; }
-    List<SocietyOption> Societies = new() { new SocietyOption { Id = null, Name = "Default" } };
+    List<SocietyOption> Societies = new();
     int? SelectedSocietyId = null;
 
     ElementReference messagesContainerRef;
@@ -162,7 +163,6 @@
 
         try
         {
-            // try to obtain the authenticated user's id from claims (if available)
             var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = auth.User;
             if (user.Identity?.IsAuthenticated == true)
@@ -193,6 +193,30 @@
         }
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ChatId.HasValue && chatList.Any())
+        {
+            await SelectChatAsync(ChatId.Value);
+        }
+        else if (ChatId.HasValue && !chatList.Any())
+        {
+            isLoading = true;
+            try
+            {
+                await LoadChatsAsync();
+                if (chatList.Any())
+                {
+                    await SelectChatAsync(ChatId.Value);
+                }
+            }
+            finally
+            {
+                isLoading = false;
+            }
+        }
+    }
+
     async Task LoadChatsAsync()
     {
         var svc = await ChatService.GetUserChatsAsync(CurrentUserId);
@@ -207,7 +231,6 @@
             LastMessageTime = null
         }).ToList() ?? new List<UiChat>();
 
-        // Limit concurrency when fetching last messages to avoid exhausting DB connections
         const int maxConcurrency = 5;
         using var sem = new SemaphoreSlim(maxConcurrency);
         var tasks = chatList.Select(async c =>
@@ -238,7 +261,7 @@
 
         await Task.WhenAll(tasks);
 
-        if (chatList.Any())
+        if (!ChatId.HasValue && chatList.Any())
         {
             await SelectChatAsync(chatList.First().Id);
         }
@@ -273,7 +296,6 @@
             SelectedChat.UnreadCount = 0;
             StateHasChanged();
 
-            // give Blazor a moment to render then scroll/focus
             await Task.Delay(50);
             await ScrollMessagesToBottomAsync();
             await FocusMessageInputAsync();
@@ -300,7 +322,6 @@
         NewMessage = "";
         StateHasChanged();
 
-        // scroll to show the optimistic message and refocus input
         await Task.Delay(50);
         await ScrollMessagesToBottomAsync();
         await FocusMessageInputAsync();
@@ -316,7 +337,6 @@
         catch (Exception ex)
         {
             _logger.LogError(ex, "SendMessageAsync failed for chat {ChatId}", SelectedChat.Id);
-            // optimistic UI: consider marking message as failed
         }
     }
 
@@ -360,5 +380,15 @@
         if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
         if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
         return time.Value.ToLocalTime().ToString("MMM d");
+    }
+
+    string GetChatItemClass(UiChat c) => SelectedChat?.Id == c.Id ? "chat-item active" : "chat-item";
+
+    string GetInitials(UiChat? c)
+    {
+        if (c is null || string.IsNullOrWhiteSpace(c.Name)) return "?";
+        var parts = c.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
     }
 }
