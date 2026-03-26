@@ -1,5 +1,7 @@
 @page "/Chats"
 @page "/Chats/{ChatId:int}"
+@rendermode InteractiveServer
+
 @using System
 @using System.Collections.Generic
 @using System.Linq
@@ -103,9 +105,22 @@
             </section>
 
             <footer class="message-input-bar">
-                <input id="message-input" class="message-input" @bind="NewMessage" @onkeydown="HandleKeyDown" placeholder="Type a message..." aria-label="Type a message" @ref="messageInputRef" />
-                <button class="send-button" @onclick="SendMessageAsync" title="Send" aria-label="Send message" disabled="@string.IsNullOrWhiteSpace(NewMessage)">
-                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z" /></svg>
+                <input id="message-input" class="message-input" 
+                       @bind="NewMessage" 
+                       @bind:event="oninput" 
+                       @onkeydown="HandleKeyDown" 
+                       placeholder="Type a message..." 
+                       aria-label="Type a message" 
+                       @ref="messageInputRef" />
+
+                <button class="send-button" 
+                        @onclick="SendMessageAsync" 
+                        title="Send" 
+                        aria-label="Send message" 
+                        disabled="@string.IsNullOrWhiteSpace(NewMessage)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                        <path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z" />
+                    </svg>
                 </button>
             </footer>
         }
@@ -340,11 +355,11 @@
         }
     }
 
-    void HandleKeyDown(KeyboardEventArgs e)
+    async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
-            _ = SendMessageAsync();
+            await SendMessageAsync();
         }
     }
 
