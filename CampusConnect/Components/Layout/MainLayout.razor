@@ -7,7 +7,9 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <div class="topbar-container">
+                <input class="top-search" @bind="TopSearch" placeholder="Search..." aria-label="Main search" />
+            </div>
         </div>
 
         <article class="content px-4">
@@ -21,3 +23,8 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+@code {
+    // simple local search state for the top bar
+    string TopSearch { get; set; } = "";
+}

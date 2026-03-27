@@ -1,0 +1,73 @@
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Nav
+
+<div class="event-card">
+    <article class="card event-card-inner h-100">
+        <div class="event-thumb" style="@GetThumbStyle()">
+            <div class="thumb-text">@GetInitials()</div>
+        </div>
+
+        <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h3 class="card-title h6 mb-0 event-title" title="@Title">@Title</h3>
+                <time class="event-date small text-muted">@Date</time>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(SocietyName))
+            {
+                <div class="mb-2">
+                    <span class="badge event-society">@SocietyName</span>
+                </div>
+            }
+
+            @if (ChildContent is not null)
+            {
+                <div class="mb-3 event-extra">
+                    @ChildContent
+                </div>
+            }
+
+            <div class="mt-auto d-flex justify-content-between align-items-center">
+                <a class="btn btn-sm btn-outline-dark" href="@($"/Events/{EventId}")" role="button" @onclick="NavigateToDetails" @onclick:preventDefault="true">View</a>
+                <div class="event-actions text-muted small">Details ?</div>
+            </div>
+        </div>
+    </article>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Date { get; set; } = "";
+    [Parameter] public string SocietyName { get; set; } = "";
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    void NavigateToDetails()
+    {
+        if (EventId > 0)
+        {
+            Nav.NavigateTo($"/Events/{EventId}");
+        }
+    }
+
+    // Simple initials used in thumb
+    string GetInitials()
+    {
+        if (string.IsNullOrWhiteSpace(Title)) return "?";
+        var parts = Title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+
+    // Generate a consistent accent gradient per EventId (falls back to a neutral gradient)
+    string GetThumbStyle()
+    {
+        // deterministic color selection
+        var seeds = new[] { "#FF8A65", "#4DB6AC", "#81D4FA", "#FFD54F", "#B39DDB", "#90A4AE" };
+        if (EventId <= 0) return "background: linear-gradient(135deg,#e9eef6,#f7fbff);";
+        var idx = Math.Abs(EventId.GetHashCode()) % seeds.Length;
+        var c1 = seeds[idx];
+        var c2 = seeds[(idx + 2) % seeds.Length];
+        return $"background: linear-gradient(135deg,{c1}, {c2});";
+    }
+}

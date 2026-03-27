@@ -1,0 +1,138 @@
+@page "/Events/{EventId:int}"
+@using CampusConnect.Models
+@using CampusConnect.Services
+@inject IEventService EventService
+@inject NavigationManager Nav
+
+<PageTitle>Event Details</PageTitle>
+
+<div class="container py-4">
+    @if (isLoading)
+    {
+        <div class="d-flex align-items-center gap-2">
+            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+            <div>Loading…</div>
+        </div>
+    }
+    else if (loadError is not null)
+    {
+        <div class="alert alert-danger">
+            <strong>Error:</strong> @loadError
+        </div>
+
+        <button class="btn btn-secondary" @onclick="GoBack">Back to events</button>
+    }
+    else if (evt is null)
+    {
+        <div class="text-center text-muted py-5">
+            <h4>No event found</h4>
+            <p class="mb-4">The event may have been removed or doesn't exist.</p>
+            <button class="btn btn-secondary" @onclick="GoBack">Back to events</button>
+        </div>
+    }
+    else
+    {
+        <div class="row gx-4">
+            <div class="col-12">
+                <button class="btn btn-link p-0 mb-3" @onclick="GoBack">? Back to events</button>
+            </div>
+
+            <div class="col-md-8">
+                <article class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h1 class="h3 mb-1">@evt.Title</h1>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                            @if (!string.IsNullOrWhiteSpace(evt.SocietyName))
+                            {
+                                <span class="badge bg-secondary text-uppercase small">@evt.SocietyName</span>
+                            }
+
+                            <small class="text-muted">@evt.DateDisplay</small>
+                        </div>
+
+                        <hr />
+
+                        <div class="event-body" style="white-space:pre-wrap;">
+                            @((MarkupString)evt.Text)
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <aside class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="h6 mb-3">Event Info</h5>
+
+                        <dl class="row mb-3">
+                            <dt class="col-4 text-muted small">Posted</dt>
+                            <dd class="col-8 small mb-1">@evt.DateDisplay</dd>
+
+                            @if (evt.SocietyId is int sid)
+                            {
+                                <dt class="col-4 text-muted small">Society</dt>
+                                <dd class="col-8 small mb-1">
+                                    <a href="@($"/Societies/{sid}")" class="text-decoration-none">@evt.SocietyName</a>
+                                </dd>
+                            }
+                        </dl>
+
+                        <div class="mt-auto d-flex gap-2">
+                            <button class="btn btn-primary w-100" @onclick="OnRsvpClicked">RSVP</button>
+                            <button class="btn btn-outline-secondary w-100" @onclick="Share">Share</button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    EventDto? evt;
+    bool isLoading = true;
+    string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            evt = await EventService.GetEventAsync(EventId);
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    void GoBack() => Nav.NavigateTo("/Events");
+
+    void OnRsvpClicked()
+    {
+        // placeholder — replace with RSVP flow/navigation as required
+        Nav.NavigateTo($"/Events/{EventId}#rsvp");
+    }
+
+    void Share()
+    {
+        try
+        {
+            var url = Nav.ToAbsoluteUri($"/Events/{EventId}").ToString();
+            // Try Web Share API via JS if available (progressive enhancement)
+            // fallback: copy to clipboard via navigator.clipboard (not included here)
+            Nav.NavigateTo(url, forceLoad: true);
+        }
+        catch
+        {
+            // best-effort; do nothing on failure
+        }
+    }
+}

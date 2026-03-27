@@ -1,0 +1,63 @@
+﻿@page "/Events"
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using CampusConnect.Models
+@using CampusConnect.Services
+@using Microsoft.AspNetCore.Components
+
+@inject IEventService EventService
+
+<PageTitle>Events</PageTitle>
+
+<div class="events-root">
+    <header class="events-header">
+        <div class="events-header-left">
+            <h2 class="events-title">All Events</h2>
+            <p class="events-sub">Upcoming campus events and society activities</p>
+        </div>
+
+        <div class="events-header-right">
+            <div class="search-wrap">
+                <input class="search-input" placeholder="Search events..." @bind="SearchQuery" />
+            </div>
+            <div class="actions">
+                <button class="btn btn-outline-primary">Create Event</button>
+                <button class="btn btn-outline-secondary">Make Announcement</button>
+            </div>
+        </div>
+    </header>
+
+    <section class="events-body">
+        <div class="events-grid">
+            @foreach (var evt in FilteredEvents)
+            {
+                <EventCard EventId="@evt.Id" Title="@evt.Title" Date="@evt.DateDisplay" SocietyName="@evt.SocietyName" />
+            }
+        </div>
+
+        @if (!FilteredEvents.Any())
+        {
+            <div class="empty-state">
+                <h4>No events found</h4>
+                <p class="text-muted">Try adjusting your search or check back later.</p>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    string SearchQuery { get; set; } = "";
+    List<EventDto> Eventss { get; set; } = new List<EventDto>();
+
+    IEnumerable<EventDto> FilteredEvents =>
+        string.IsNullOrWhiteSpace(SearchQuery)
+            ? Eventss
+            : Eventss.Where(e => e.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || (e.SocietyName ?? "").Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        Eventss = await EventService.GetEventsAsync();
+    }
+}

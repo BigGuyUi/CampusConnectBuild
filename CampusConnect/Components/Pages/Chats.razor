@@ -1,0 +1,409 @@
+@page "/Chats"
+@page "/Chats/{ChatId:int}"
+@rendermode InteractiveServer
+
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Security.Claims
+@using CampusConnect.Models
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
+@inject CampusConnect.Services.IChatService ChatService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILoggerFactory LoggerFactory
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Chats</PageTitle>
+
+@* Styles moved to Chats.razor.css for clarity and to avoid mixing markup + CSS *@
+
+<div class="chats-root">
+    <aside class="chat-list-panel" role="navigation" aria-label="Chat list">
+        <div class="chat-search-area">
+            <input class="chat-search" @bind="SearchText" placeholder="SEARCH CHATS..." aria-label="Search chats" />
+        </div>
+
+        <div class="chat-list-scroll" role="list">
+            @if (isLoading)
+            {
+                <div class="empty">Loading…</div>
+            }
+            else if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="empty error">Sorry — could not load chats. (@errorMessage)</div>
+            }
+            else if (!DisplayedChats.Any())
+            {
+                <div class="empty">No chats</div>
+            }
+            else
+            {
+                @foreach (var c in DisplayedChats)
+                {
+                    <NavLink class="@GetChatItemClass(c)" href="@($"/Chats/{c.Id}")" Match="NavLinkMatch.Prefix" aria-current="@(SelectedChat?.Id == c.Id ? "true" : "false")">
+                        <div class="avatar" aria-hidden="true">@GetInitials(c)</div>
+                        <div style="flex:1; min-width:0;">
+                            <div class="chat-item-top">
+                                <div class="chat-item-name">@c.Name</div>
+                                <div class="chat-item-time">@FormatRelative(c.LastMessageTime)</div>
+                            </div>
+
+                            <div class="chat-item-bottom">
+                                <div class="chat-item-preview">@c.LastMessage</div>
+                                @if (c.UnreadCount > 0)
+                                {
+                                    <div class="chat-item-badge" aria-label="@($"{c.UnreadCount} unread")">@c.UnreadCount</div>
+                                }
+                            </div>
+                        </div>
+                    </NavLink>
+                }
+            }
+        </div>
+    </aside>
+
+    <main class="message-area" role="main">
+        @if (SelectedChat is null)
+        {
+            <div class="placeholder" style="padding:48px; color:#6b7280;">Select a chat to view messages</div>
+        }
+        else
+        {
+            <header class="message-header">
+                <div class="d-flex align-items-center" style="gap:12px;">
+                    <div class="avatar" aria-hidden="true">@GetInitials(SelectedChat)</div>
+                    <div>
+                        <div class="group-name">@SelectedChat.Name</div>
+                        <div class="group-date" style="font-size:12px;color:#6b7280;">Active</div>
+                    </div>
+                </div>
+
+                <div style="font-size:13px;color:#6b7280;">@FormatRelative(SelectedChat.LastMessageTime)</div>
+            </header>
+
+            <section id="messages-container" class="messages-container" role="log" aria-live="polite" @ref="messagesContainerRef">
+                @if (SelectedChat.Messages == null || !SelectedChat.Messages.Any())
+                {
+                    <div class="date-divider" style="color:#6b7280">No messages yet</div>
+                }
+                else
+                {
+                    @foreach (var msg in SelectedChat.Messages)
+                    {
+                        <article class="message-bubble @(msg.IsMine ? "own" : "")" @key="msg.Id">
+                            <div class="message-sender">@msg.Sender</div>
+                            <div class="message-text">@msg.Text</div>
+                            <div class="message-timestamp">@msg.SentAt.ToLocalTime().ToString("t")</div>
+                        </article>
+                    }
+                }
+                <div id="messages-end" @ref="messagesEndRef"></div>
+            </section>
+
+            <footer class="message-input-bar">
+                <input id="message-input" class="message-input" 
+                       @bind="NewMessage" 
+                       @bind:event="oninput" 
+                       @onkeydown="HandleKeyDown" 
+                       placeholder="Type a message..." 
+                       aria-label="Type a message" 
+                       @ref="messageInputRef" />
+
+                <button class="send-button" 
+                        @onclick="SendMessageAsync" 
+                        title="Send" 
+                        aria-label="Send message" 
+                        disabled="@string.IsNullOrWhiteSpace(NewMessage)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                        <path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z" />
+                    </svg>
+                </button>
+            </footer>
+        }
+    </main>
+</div>
+
+@code {
+    ILogger _logger;
+
+    [Parameter]
+    public int? ChatId { get; set; }
+
+    // lightweight UI wrapper used only by this component
+    class UiChat
+    {
+        public int Id { get; set; }
+        public int? SocietyId { get; set; }
+        public string Name { get; set; } = "";
+        public string LastMessage { get; set; } = "";
+        public DateTime? LastMessageTime { get; set; }
+        public int UnreadCount { get; set; }
+        public List<MessageDto> Messages { get; set; } = new();
+        public bool MessagesLoaded { get; set; } = false;
+    }
+
+    List<UiChat> chatList = new();
+    UiChat? SelectedChat;
+    string NewMessage = "";
+    string SearchText = "";
+    int CurrentUserId = 3;
+    int _tempMessageId = -1;
+
+    bool isLoading = false;
+    string? errorMessage;
+
+    class SocietyOption { public int? Id { get; set; } public string Name { get; set; } = ""; }
+    List<SocietyOption> Societies = new();
+    int? SelectedSocietyId = null;
+
+    ElementReference messagesContainerRef;
+    ElementReference messagesEndRef;
+    ElementReference messageInputRef;
+
+    IEnumerable<UiChat> DisplayedChats => string.IsNullOrWhiteSpace(SearchText)
+        ? (SelectedSocietyId == null ? chatList : chatList.Where(c => c.SocietyId == SelectedSocietyId))
+        : (SelectedSocietyId == null
+            ? chatList.Where(c => c.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || c.LastMessage.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+            : chatList.Where(c => c.SocietyId == SelectedSocietyId && (c.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || c.LastMessage.Contains(SearchText, StringComparison.OrdinalIgnoreCase))));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _logger = LoggerFactory.CreateLogger("Chats");
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = user.FindFirst(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+                if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                {
+                    CurrentUserId = uid;
+                }
+            }
+
+            await LoadChatsAsync();
+
+            if (!chatList.Any())
+            {
+                errorMessage = $"No chats found for user id {CurrentUserId}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "OnInitializedAsync failed");
+            errorMessage = ex.Message;
+            chatList = new List<UiChat>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ChatId.HasValue && chatList.Any())
+        {
+            await SelectChatAsync(ChatId.Value);
+        }
+        else if (ChatId.HasValue && !chatList.Any())
+        {
+            isLoading = true;
+            try
+            {
+                await LoadChatsAsync();
+                if (chatList.Any())
+                {
+                    await SelectChatAsync(ChatId.Value);
+                }
+            }
+            finally
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    async Task LoadChatsAsync()
+    {
+        var svc = await ChatService.GetUserChatsAsync(CurrentUserId);
+        chatList = svc?.Select(s => new UiChat
+        {
+            Id = s.Id,
+            SocietyId = s.SocietyId,
+            Name = s.Name,
+            LastMessage = s.LastMessage,
+            UnreadCount = s.UnreadCount,
+            Messages = new List<MessageDto>(),
+            LastMessageTime = null
+        }).ToList() ?? new List<UiChat>();
+
+        const int maxConcurrency = 5;
+        using var sem = new SemaphoreSlim(maxConcurrency);
+        var tasks = chatList.Select(async c =>
+        {
+            await sem.WaitAsync();
+            try
+            {
+                try
+                {
+                    var msgs = await ChatService.GetChatMessagesAsync(c.Id, CurrentUserId);
+                    if (msgs?.Any() == true)
+                    {
+                        var last = msgs.Last();
+                        c.LastMessageTime = last.SentAt;
+                        c.LastMessage = !string.IsNullOrWhiteSpace(last.Text) ? last.Text : c.LastMessage;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load preview messages for chat {ChatId}", c.Id);
+                }
+            }
+            finally
+            {
+                sem.Release();
+            }
+        }).ToArray();
+
+        await Task.WhenAll(tasks);
+
+        if (!ChatId.HasValue && chatList.Any())
+        {
+            await SelectChatAsync(chatList.First().Id);
+        }
+    }
+
+    void SelectSociety(int? societyId)
+    {
+        SelectedSocietyId = societyId;
+        SelectedChat = null;
+    }
+
+    async Task SelectChatAsync(int chatId)
+    {
+        SelectedChat = chatList.FirstOrDefault(c => c.Id == chatId);
+        if (SelectedChat != null)
+        {
+            if (!SelectedChat.MessagesLoaded)
+            {
+                try
+                {
+                    var msgs = await ChatService.GetChatMessagesAsync(chatId, CurrentUserId);
+                    SelectedChat.Messages = msgs ?? new List<MessageDto>();
+                    SelectedChat.MessagesLoaded = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load messages for chat {ChatId}", chatId);
+                    errorMessage = "Failed to load messages: " + ex.Message;
+                    SelectedChat.Messages = new List<MessageDto>();
+                }
+            }
+            SelectedChat.UnreadCount = 0;
+            StateHasChanged();
+
+            await Task.Delay(50);
+            await ScrollMessagesToBottomAsync();
+            await FocusMessageInputAsync();
+        }
+    }
+
+    async Task SendMessageAsync()
+    {
+        if (SelectedChat is null || string.IsNullOrWhiteSpace(NewMessage))
+            return;
+
+        var temp = new MessageDto
+        {
+            Id = _tempMessageId--,
+            Sender = "You",
+            Text = NewMessage.Trim(),
+            SentAt = DateTime.UtcNow,
+            IsMine = true
+        };
+
+        SelectedChat.Messages.Add(temp);
+        SelectedChat.LastMessage = temp.Text;
+        SelectedChat.LastMessageTime = temp.SentAt;
+        NewMessage = "";
+        StateHasChanged();
+
+        await Task.Delay(50);
+        await ScrollMessagesToBottomAsync();
+        await FocusMessageInputAsync();
+
+        try
+        {
+            var ok = await ChatService.SendMessageAsync(SelectedChat.Id, CurrentUserId, temp.Text);
+            if (!ok)
+            {
+                _logger.LogWarning("SendMessageAsync returned false for chat {ChatId}", SelectedChat.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SendMessageAsync failed for chat {ChatId}", SelectedChat.Id);
+        }
+    }
+
+    async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    async Task ScrollMessagesToBottomAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("chatHelpers.scrollToBottom", messagesContainerRef);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "ScrollMessagesToBottomAsync failed");
+        }
+    }
+
+    async Task FocusMessageInputAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("chatHelpers.focusElement", messageInputRef);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "FocusMessageInputAsync failed");
+        }
+    }
+
+    string FormatRelative(DateTime? time)
+    {
+        if (time is null || time == DateTime.MinValue) return "";
+        var span = DateTime.UtcNow - time.Value.ToUniversalTime();
+        if (span.TotalSeconds < 60) return $"{(int)span.TotalSeconds}s ago";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        return time.Value.ToLocalTime().ToString("MMM d");
+    }
+
+    string GetChatItemClass(UiChat c) => SelectedChat?.Id == c.Id ? "chat-item active" : "chat-item";
+
+    string GetInitials(UiChat? c)
+    {
+        if (c is null || string.IsNullOrWhiteSpace(c.Name)) return "?";
+        var parts = c.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+}

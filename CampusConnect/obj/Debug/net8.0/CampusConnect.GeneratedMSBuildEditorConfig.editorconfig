@@ -24,24 +24,36 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Counter.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDb3VudGVyLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Error.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/EventDetails.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudERldGFpbHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Home.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Weather.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xXZWF0aGVyLnJhem9y
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Notifications.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xOb3RpZmljYXRpb25zLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Settings.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR0aW5ncy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Societies.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTb2NpZXRpZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Routes.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Shared/Search_Bar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcU2VhcmNoX0Jhci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/_Imports.razor]
@@ -55,3 +67,15 @@ build_metadata.AdditionalFiles.CssScope = b-xapf1lnt6k
 [C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Layout/NavMenu.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-vthvbfu9u9
+
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Chats.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDaGF0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-7e4mdio4ma
+
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Events.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-cqcufkf9sc
+
+[C:/Users/767208/Source/Repos/CampusConnectBuild/CampusConnect/Components/Shared/EventCard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRXZlbnRDYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-ohd3bidcrj
