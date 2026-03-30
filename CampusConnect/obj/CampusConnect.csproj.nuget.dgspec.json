@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\767208\\Source\\Repos\\CampusConnectBuild\\CampusConnect\\CampusConnect.csproj": {}
+    "C:\\Users\\Thomas\\Documents\\Uni Code\\DDD TDJ SQLite\\CampusConnect\\CampusConnect.csproj": {}
   },
   "projects": {
-    "C:\\Users\\767208\\Source\\Repos\\CampusConnectBuild\\CampusConnect\\CampusConnect.csproj": {
+    "C:\\Users\\Thomas\\Documents\\Uni Code\\DDD TDJ SQLite\\CampusConnect\\CampusConnect.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\767208\\Source\\Repos\\CampusConnectBuild\\CampusConnect\\CampusConnect.csproj",
+        "projectUniqueName": "C:\\Users\\Thomas\\Documents\\Uni Code\\DDD TDJ SQLite\\CampusConnect\\CampusConnect.csproj",
         "projectName": "CampusConnect",
-        "projectPath": "C:\\Users\\767208\\Source\\Repos\\CampusConnectBuild\\CampusConnect\\CampusConnect.csproj",
-        "packagesPath": "C:\\Users\\767208\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\767208\\Source\\Repos\\CampusConnectBuild\\CampusConnect\\obj\\",
+        "projectPath": "C:\\Users\\Thomas\\Documents\\Uni Code\\DDD TDJ SQLite\\CampusConnect\\CampusConnect.csproj",
+        "packagesPath": "C:\\Users\\Thomas\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Thomas\\Documents\\Uni Code\\DDD TDJ SQLite\\CampusConnect\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\767208\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Thomas\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,7 +26,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -53,7 +52,15 @@
           "dependencies": {
             "Microsoft.Data.SqlClient": {
               "target": "Package",
-              "version": "[6.1.4, )"
+              "version": "[7.0.0, )"
+            },
+            "Microsoft.Data.Sqlite.Core": {
+              "target": "Package",
+              "version": "[10.0.5, )"
+            },
+            "SQLitePCLRaw.bundle_green": {
+              "target": "Package",
+              "version": "[2.1.11, )"
             }
           },
           "imports": [
@@ -75,7 +82,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

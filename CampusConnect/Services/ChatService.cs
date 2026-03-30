@@ -8,6 +8,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Data.Sqlite;
 
 namespace CampusConnect.Services
 {
@@ -24,25 +25,44 @@ namespace CampusConnect.Services
                                 ?? throw new InvalidOperationException("Missing connection string 'DefaultConnection'. Add it to appsettings.json.");
         }
 
-        private SqlConnection CreateConnection() => new SqlConnection(_connectionString);
+        private SqliteConnection CreateConnection() => new SqliteConnection(_connectionString);
 
         public async Task<List<ChatSummary>> GetUserChatsAsync(int userId, CancellationToken cancellationToken = default)
         {
             var list = new List<ChatSummary>();
             const string sql = @"
-SELECT c.ChatID, c.SocietyID, c.ChatName,
-       (SELECT TOP (1) m.Text FROM Messages m WHERE m.ChatID = c.ChatID ORDER BY m.PostTime DESC) AS LastMessage
+SELECT 
+    c.ChatID, 
+    c.SocietyID, 
+    c.ChatName,
+    (
+        SELECT m.Text 
+        FROM Messages m 
+        WHERE m.ChatID = c.ChatID 
+        ORDER BY m.PostTime DESC 
+        LIMIT 1
+    ) AS LastMessage
 FROM Chats c
-WHERE EXISTS (SELECT 1 FROM ChatMembers cm WHERE cm.ChatID = c.ChatID AND cm.UserID = @userId)
-   OR EXISTS (SELECT 1 FROM SocietyMembers sm WHERE sm.SocietyID = c.SocietyID AND sm.UserID = @userId)
+WHERE EXISTS (
+        SELECT 1 
+        FROM ChatMembers cm 
+        WHERE cm.ChatID = c.ChatID 
+          AND cm.UserID = @userId
+    )
+   OR EXISTS (
+        SELECT 1 
+        FROM SocietyMembers sm 
+        WHERE sm.SocietyID = c.SocietyID 
+          AND sm.UserID = @userId
+    )
 ORDER BY c.ChatID;
 ";
 
             try
             {
                 await using var conn = CreateConnection();
-                await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.Add(new SqlParameter("@userId", SqlDbType.Int) { Value = userId });
+                await using var cmd = new SqliteCommand(sql, conn);
+                cmd.Parameters.Add(new SqliteParameter("@userId", SqlDbType.Int) { Value = userId });
 
                 await conn.OpenAsync(cancellationToken);
                 await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken);
@@ -81,8 +101,8 @@ ORDER BY m.PostTime;
             try
             {
                 await using var conn = CreateConnection();
-                await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.Add(new SqlParameter("@chatId", SqlDbType.Int) { Value = chatId });
+                await using var cmd = new SqliteCommand(sql, conn);
+                cmd.Parameters.Add(new SqliteParameter("@chatId", SqlDbType.Int) { Value = chatId });
 
                 await conn.OpenAsync(cancellationToken);
                 await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken);
@@ -123,12 +143,12 @@ VALUES (@chatId, @userId, @text, NULL, @postTime);
             try
             {
                 await using var conn = CreateConnection();
-                await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.Add(new SqlParameter("@chatId", SqlDbType.Int) { Value = chatId });
-                cmd.Parameters.Add(new SqlParameter("@userId", SqlDbType.Int) { Value = userId });
+                await using var cmd = new SqliteCommand(sql, conn);
+                cmd.Parameters.Add(new SqliteParameter("@chatId", SqlDbType.Int) { Value = chatId });
+                cmd.Parameters.Add(new SqliteParameter("@userId", SqlDbType.Int) { Value = userId });
                 // explicitly allow large text (NVARCHAR(MAX))
-                cmd.Parameters.Add(new SqlParameter("@text", SqlDbType.NVarChar, -1) { Value = text ?? string.Empty });
-                cmd.Parameters.Add(new SqlParameter("@postTime", SqlDbType.DateTime2) { Value = DateTime.UtcNow });
+                cmd.Parameters.Add(new SqliteParameter("@text", SqliteType.Text) { Value = text ?? string.Empty });
+                cmd.Parameters.Add(new SqliteParameter("@postTime", SqlDbType.DateTime2) { Value = DateTime.UtcNow });
 
                 await conn.OpenAsync(cancellationToken);
                 var rows = await cmd.ExecuteNonQueryAsync(cancellationToken);
