@@ -8,14 +8,32 @@ namespace CampusConnect
     {
         public static void IntialiseDatabase(string connectionstring_)
         {
-            var dbPath = @"CampusConnect.db";
+            // Parse the connection string to get the Data Source and make it absolute
+            var builder = new SQLiteConnectionStringBuilder(connectionstring_);
+            var dataSource = builder.DataSource ?? "CampusConnect.db";
 
-            if (!File.Exists(dbPath))
+            if (!Path.IsPathRooted(dataSource))
             {
-                SQLiteConnection.CreateFile(dbPath);
+                // Use the current directory (app's working directory) as base
+                dataSource = Path.Combine(Directory.GetCurrentDirectory(), dataSource);
             }
 
-            using (var connection = new SQLiteConnection(connectionstring_))
+            // Ensure directory exists
+            var dir = Path.GetDirectoryName(dataSource);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            // If file doesn't exist, create it
+            if (!File.Exists(dataSource))
+            {
+                SQLiteConnection.CreateFile(dataSource);
+            }
+
+            // Ensure the connection string uses the absolute path
+            builder.DataSource = dataSource;
+            var absoluteConnectionString = builder.ToString();
+
+            using (var connection = new SQLiteConnection(absoluteConnectionString))
             {
                 connection.Open();
 

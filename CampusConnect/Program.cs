@@ -1,11 +1,17 @@
+using System;
 using CampusConnect;
 using CampusConnect.Components;
 using CampusConnect.Services;
+using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // initialize DB using connection string from configuration
-var sqliteConn = builder.Configuration.GetConnectionString("DefaultConnection");
+var sqliteConn = builder.Configuration.GetConnectionString("DefaultConnection")
+                 ?? throw new InvalidOperationException("Missing connection string 'DefaultConnection'.");
+
+// Ensure database file & schema exist (development convenience) using DatabaseHelper
+DatabaseHelper.IntialiseDatabase(sqliteConn);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
