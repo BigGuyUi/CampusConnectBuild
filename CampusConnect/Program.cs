@@ -1,7 +1,11 @@
+using CampusConnect;
 using CampusConnect.Components;
 using CampusConnect.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// initialize DB using connection string from configuration
+var sqliteConn = builder.Configuration.GetConnectionString("DefaultConnection");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

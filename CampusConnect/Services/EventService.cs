@@ -4,7 +4,7 @@ using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using CampusConnect.Models;
-using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +22,7 @@ namespace CampusConnect.Services
                                 ?? throw new InvalidOperationException("Missing connection string 'DefaultConnection'.");
         }
 
-        private SqlConnection CreateConnection() => new SqlConnection(_connectionString);
+        private SqliteConnection CreateConnection() => new SqliteConnection(_connectionString);
 
         public async Task<List<EventDto>> GetEventsAsync(CancellationToken cancellationToken = default)
         {
@@ -37,18 +37,25 @@ ORDER BY p.PostTime DESC;
             try
             {
                 await using var conn = CreateConnection();
-                await using var cmd = new SqlCommand(sql, conn);
+                await using var cmd = new SqliteCommand(sql, conn);
 
                 await conn.OpenAsync(cancellationToken);
                 await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken);
                 while (await rdr.ReadAsync(cancellationToken))
                 {
-                    var id = rdr.GetInt32(0);
+                    var id = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0);
                     var societyId = rdr.IsDBNull(1) ? (int?)null : rdr.GetInt32(1);
                     var societyName = rdr.IsDBNull(2) ? null : rdr.GetString(2);
                     var title = rdr.IsDBNull(3) ? "" : rdr.GetString(3);
                     var text = rdr.IsDBNull(4) ? "" : rdr.GetString(4);
-                    var postTime = rdr.IsDBNull(5) ? DateTime.MinValue : rdr.GetDateTime(5);
+
+                    DateTime postTime = DateTime.MinValue;
+                    if (!rdr.IsDBNull(5))
+                    {
+                        var raw = rdr.GetValue(5)?.ToString();
+                        if (!string.IsNullOrEmpty(raw))
+                            DateTime.TryParse(raw, out postTime);
+                    }
 
                     list.Add(new EventDto
                     {
@@ -82,19 +89,26 @@ WHERE p.PostID = @postId;
             try
             {
                 await using var conn = CreateConnection();
-                await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.Add(new SqlParameter("@postId", SqlDbType.Int) { Value = id });
+                await using var cmd = new SqliteCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@postId", id);
 
                 await conn.OpenAsync(cancellationToken);
                 await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken);
                 if (await rdr.ReadAsync(cancellationToken))
                 {
-                    var evtId = rdr.GetInt32(0);
+                    var evtId = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0);
                     var societyId = rdr.IsDBNull(1) ? (int?)null : rdr.GetInt32(1);
                     var societyName = rdr.IsDBNull(2) ? null : rdr.GetString(2);
                     var title = rdr.IsDBNull(3) ? "" : rdr.GetString(3);
                     var text = rdr.IsDBNull(4) ? "" : rdr.GetString(4);
-                    var postTime = rdr.IsDBNull(5) ? DateTime.MinValue : rdr.GetDateTime(5);
+
+                    DateTime postTime = DateTime.MinValue;
+                    if (!rdr.IsDBNull(5))
+                    {
+                        var raw = rdr.GetValue(5)?.ToString();
+                        if (!string.IsNullOrEmpty(raw))
+                            DateTime.TryParse(raw, out postTime);
+                    }
 
                     return new EventDto
                     {
