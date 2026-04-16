@@ -1,0 +1,19 @@
+.society-card {
+    transition: box-shadow .15s ease, transform .08s ease;
+}
+.society-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+}
+.society-initials {
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    background:#0d6efd;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    font-size:1rem;
+}

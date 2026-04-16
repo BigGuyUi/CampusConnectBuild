@@ -12,14 +12,22 @@
 
 <PageTitle>Create Event</PageTitle>
 
-<div class="container py-3">
-    <header class="mb-3 d-flex justify-content-between align-items-start">
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><NavLink href="/Events">Events</NavLink></li>
+            <li class="breadcrumb-item"><NavLink href="/Events/Create">Create</NavLink></li>
+            <li class="breadcrumb-item active" aria-current="page">@((SocietyName ?? "Society"))</li>
+        </ol>
+    </nav>
+
+    <header class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h2>Create Event</h2>
+            <h1 class="h4 mb-1">Create Event</h1>
             <div class="text-muted small">Creating for: <strong>@(SocietyName ?? "—")</strong></div>
         </div>
         <div>
-            <NavLink class="btn btn-link" href="/Events/Create">← Back</NavLink>
+            <NavLink class="btn btn-outline-secondary btn-sm" href="/Events/Create">← Change society</NavLink>
         </div>
     </header>
 
@@ -28,68 +36,140 @@
         <div class="alert alert-danger">@errorMessage</div>
     }
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="mb-3">
-                <label class="form-label">Title</label>
-                <input class="form-control" @bind="Title" />
-                @if (!string.IsNullOrEmpty(titleError))
-                {
-                    <div class="form-text text-danger">@titleError</div>
-                }
-            </div>
+    <div class="row g-4">
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Title <span class="text-danger">*</span></label>
+                        <input class="form-control"
+                               placeholder="Event title"
+                               maxlength="@TitleMax"
+                               value="@Title"
+                               @oninput="OnTitleInput"
+                               disabled="@isSubmitting" />
+                        <div class="form-text text-muted">@($"{Title.Length}/{TitleMax} characters")</div>
+                        @if (!string.IsNullOrEmpty(titleError))
+                        {
+                            <div class="form-text text-danger">@titleError</div>
+                        }
+                    </div>
 
-            <div class="mb-3">
-                <label class="form-label">Description</label>
-                <textarea class="form-control" rows="6" @bind="Text"></textarea>
-                @if (!string.IsNullOrEmpty(textError))
-                {
-                    <div class="form-text text-danger">@textError</div>
-                }
-            </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control"
+                                  rows="6"
+                                  placeholder="Describe the event"
+                                  maxlength="@DescriptionMax"
+                                  @oninput="OnDescriptionInput"
+                                  disabled="@isSubmitting">@Text</textarea>
+                        <div class="form-text text-muted">@($"{Text.Length}/{DescriptionMax} characters")</div>
+                        @if (!string.IsNullOrEmpty(textError))
+                        {
+                            <div class="form-text text-danger">@textError</div>
+                        }
+                    </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-12 col-md-6">
-                    <label class="form-label">Event date & time</label>
-                    <input class="form-control" type="datetime-local" value="@EventDateString" @onchange="OnEventDateChanged" />
-                    @if (!string.IsNullOrEmpty(dateError))
-                    {
-                        <div class="form-text text-danger">@dateError</div>
-                    }
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Event date & time <span class="text-danger">*</span></label>
+                            <input class="form-control" type="datetime-local" value="@EventDateString" @onchange="OnEventDateChanged" disabled="@isSubmitting" />
+                            @if (!string.IsNullOrEmpty(dateError))
+                            {
+                                <div class="form-text text-danger">@dateError</div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Location <span class="text-danger">*</span></label>
+                            <input class="form-control"
+                                   placeholder="Venue or room"
+                                   maxlength="@LocationMax"
+                                   value="@Location"
+                                   @oninput="OnLocationInput"
+                                   disabled="@isSubmitting" />
+                            <div class="form-text text-muted">@($"{Location.Length}/{LocationMax} characters")</div>
+                            @if (!string.IsNullOrEmpty(locationError))
+                            {
+                                <div class="form-text text-danger">@locationError</div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" @onclick="OnCreateClicked" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Creating…</span>
+                            }
+                            else
+                            {
+                                <span>Create Event</span>
+                            }
+                        </button>
+                        <NavLink class="btn btn-outline-secondary" href="/Events">Cancel</NavLink>
+                    </div>
                 </div>
-                <div class="col-12 col-md-6">
-                    <label class="form-label">Location</label>
-                    <input class="form-control" @bind="Location" />
-                    @if (!string.IsNullOrEmpty(locationError))
-                    {
-                        <div class="form-text text-danger">@locationError</div>
-                    }
-                </div>
-            </div>
-
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary" @onclick="OnCreateClicked" disabled="@isSubmitting">Create Event</button>
-                <NavLink class="btn btn-outline-secondary" href="/Events">Cancel</NavLink>
             </div>
         </div>
+
+        <aside class="col-12 col-lg-5">
+            <div class="card border-0">
+                <div class="card-body">
+                    <h6 class="mb-3">Preview</h6>
+                    <div class="preview-card p-3 rounded shadow-sm">
+                        <div class="mb-2">
+                            <div class="h6 mb-0">@(!string.IsNullOrWhiteSpace(Title) ? Title : "(Untitled)")</div>
+                            <div class="text-muted small">@(_eventDate?.ToLocalTime().ToString("f") ?? "Date not set")</div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="text-muted small">Location</div>
+                            <div>@(string.IsNullOrWhiteSpace(Location) ? "Not set" : Location)</div>
+                        </div>
+                        <hr />
+                        <div class="text-muted small mb-1">Description</div>
+                        <div class="preview-description">@((string.IsNullOrWhiteSpace(Text) ? "(No description)" : Text))</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
     </div>
 </div>
 
 @* Confirmation: are these details correct? *@
 @if (showConfirmDetails)
 {
-    <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1050;background-color:rgba(0,0,0,.5)"></div>
+    <div class="modal-backdrop fade show"></div>
     <div class="d-flex align-items-center justify-content-center" style="position:fixed;inset:0;z-index:1060;">
-        <div class="card shadow-sm" style="max-width:640px;width:100%;">
+        <div class="card shadow-sm" style="max-width:720px;width:100%;">
             <div class="card-body">
-                <h5 class="card-title">Confirm event details</h5>
-                <p class="mb-2"><strong>Title:</strong> @Title</p>
-                <p class="mb-2"><strong>Description:</strong> @((string.IsNullOrWhiteSpace(Text) ? "(none)" : Text))</p>
-                <p class="mb-2"><strong>When:</strong> @(_eventDate?.ToLocalTime().ToString("f") ?? "(not set)")</p>
-                <p class="mb-3"><strong>Where:</strong> @(string.IsNullOrWhiteSpace(Location) ? "(not set)" : Location)</p>
-                <div class="d-flex justify-content-end gap-2">
+                <h5 class="card-title">Are these details correct?</h5>
+                <div class="row">
+                    <div class="col-8">
+                        <p class="mb-1"><strong>Title</strong></p>
+                        <p class="mb-2">@Title</p>
+
+                        <p class="mb-1"><strong>Description</strong></p>
+                        <p class="mb-2">@((string.IsNullOrWhiteSpace(Text) ? "(none)" : Text))</p>
+                    </div>
+                    <div class="col-4">
+                        <p class="mb-1"><strong>When</strong></p>
+                        <p class="mb-2">@(_eventDate?.ToLocalTime().ToString("f") ?? "(not set)")</p>
+
+                        <p class="mb-1"><strong>Where</strong></p>
+                        <p class="mb-2">@(!string.IsNullOrWhiteSpace(Location) ? Location : "(not set)")</p>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
                     <button class="btn btn-outline-secondary" @onclick="() => showConfirmDetails = false">Edit</button>
-                    <button class="btn btn-danger" @onclick="ConfirmCreate" disabled="@isSubmitting">Yes, create event</button>
+                    <button class="btn btn-danger" @onclick="ConfirmCreate" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        <span>Yes, create event</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -99,13 +179,14 @@
 @* Post-creation confirmation modal *@
 @if (showConfirmation)
 {
-    <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1050;background-color:rgba(0,0,0,.5)"></div>
+    <div class="modal-backdrop fade show"></div>
     <div class="d-flex align-items-center justify-content-center" style="position:fixed;inset:0;z-index:1060;">
         <div class="card shadow-sm" style="max-width:520px;width:100%;">
-            <div class="card-body">
+            <div class="card-body text-center">
+                <div class="display-6 text-success mb-2">✓</div>
                 <h5 class="card-title">Event created</h5>
                 <p class="card-text mb-3">Your event <strong>@(Title)</strong> was created for <strong>@(SocietyName ?? "")</strong>.</p>
-                <div class="d-flex justify-content-end gap-2">
+                <div class="d-flex justify-content-center gap-2">
                     <NavLink class="btn btn-outline-secondary" href="/Events" @onclick="OnNavClicked">Back to events</NavLink>
                     <NavLink class="btn btn-primary" href="@($"/Events/{createdSlug}")" @onclick="OnNavClicked">View event</NavLink>
                 </div>
@@ -115,6 +196,10 @@
 }
 
 @code {
+    const int TitleMax = 100;
+    const int DescriptionMax = 1000;
+    const int LocationMax = 200;
+
     [Parameter]
     public int SocietyId { get; set; }
 
@@ -189,6 +274,27 @@
         EventDateString = e.Value?.ToString() ?? "";
     }
 
+    void OnTitleInput(ChangeEventArgs e)
+    {
+        var v = e.Value?.ToString() ?? "";
+        if (v.Length > TitleMax) v = v.Substring(0, TitleMax);
+        Title = v;
+    }
+
+    void OnDescriptionInput(ChangeEventArgs e)
+    {
+        var v = e.Value?.ToString() ?? "";
+        if (v.Length > DescriptionMax) v = v.Substring(0, DescriptionMax);
+        Text = v;
+    }
+
+    void OnLocationInput(ChangeEventArgs e)
+    {
+        var v = e.Value?.ToString() ?? "";
+        if (v.Length > LocationMax) v = v.Substring(0, LocationMax);
+        Location = v;
+    }
+
     void ClearValidation()
     {
         titleError = textError = dateError = locationError = null;
@@ -204,10 +310,20 @@
             titleError = "Title is required.";
             ok = false;
         }
+        else if (Title.Length > TitleMax)
+        {
+            titleError = $"Title must be at most {TitleMax} characters.";
+            ok = false;
+        }
 
         if (string.IsNullOrWhiteSpace(Text))
         {
             textError = "Description is required.";
+            ok = false;
+        }
+        else if (Text.Length > DescriptionMax)
+        {
+            textError = $"Description must be at most {DescriptionMax} characters.";
             ok = false;
         }
 
@@ -220,6 +336,11 @@
         if (string.IsNullOrWhiteSpace(Location))
         {
             locationError = "Location is required.";
+            ok = false;
+        }
+        else if (Location.Length > LocationMax)
+        {
+            locationError = $"Location must be at most {LocationMax} characters.";
             ok = false;
         }
 
@@ -302,3 +423,16 @@
         NavigationManager.NavigateTo($"/Events/{createdSlug}");
     }
 }
+
+<style>
+    .preview-card {
+        background: #fff;
+    }
+    .preview-description {
+        white-space: pre-wrap;
+        color: #444;
+    }
+    .modal-backdrop { /* subtle blur fallback for modal backdrop on supported browsers */
+        backdrop-filter: blur(.5px);
+    }
+</style>
