@@ -1,0 +1,304 @@
+﻿@page "/Events/Create/{SocietyId:int}"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using CampusConnect.Models
+@using CampusConnect.Services
+@inject ISocietyService SocietyService
+@inject IEventService EventService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create Event</PageTitle>
+
+<div class="container py-3">
+    <header class="mb-3 d-flex justify-content-between align-items-start">
+        <div>
+            <h2>Create Event</h2>
+            <div class="text-muted small">Creating for: <strong>@(SocietyName ?? "—")</strong></div>
+        </div>
+        <div>
+            <NavLink class="btn btn-link" href="/Events/Create">← Back</NavLink>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input class="form-control" @bind="Title" />
+                @if (!string.IsNullOrEmpty(titleError))
+                {
+                    <div class="form-text text-danger">@titleError</div>
+                }
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" rows="6" @bind="Text"></textarea>
+                @if (!string.IsNullOrEmpty(textError))
+                {
+                    <div class="form-text text-danger">@textError</div>
+                }
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Event date & time</label>
+                    <input class="form-control" type="datetime-local" value="@EventDateString" @onchange="OnEventDateChanged" />
+                    @if (!string.IsNullOrEmpty(dateError))
+                    {
+                        <div class="form-text text-danger">@dateError</div>
+                    }
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Location</label>
+                    <input class="form-control" @bind="Location" />
+                    @if (!string.IsNullOrEmpty(locationError))
+                    {
+                        <div class="form-text text-danger">@locationError</div>
+                    }
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" @onclick="OnCreateClicked" disabled="@isSubmitting">Create Event</button>
+                <NavLink class="btn btn-outline-secondary" href="/Events">Cancel</NavLink>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Confirmation: are these details correct? *@
+@if (showConfirmDetails)
+{
+    <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1050;background-color:rgba(0,0,0,.5)"></div>
+    <div class="d-flex align-items-center justify-content-center" style="position:fixed;inset:0;z-index:1060;">
+        <div class="card shadow-sm" style="max-width:640px;width:100%;">
+            <div class="card-body">
+                <h5 class="card-title">Confirm event details</h5>
+                <p class="mb-2"><strong>Title:</strong> @Title</p>
+                <p class="mb-2"><strong>Description:</strong> @((string.IsNullOrWhiteSpace(Text) ? "(none)" : Text))</p>
+                <p class="mb-2"><strong>When:</strong> @(_eventDate?.ToLocalTime().ToString("f") ?? "(not set)")</p>
+                <p class="mb-3"><strong>Where:</strong> @(string.IsNullOrWhiteSpace(Location) ? "(not set)" : Location)</p>
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-outline-secondary" @onclick="() => showConfirmDetails = false">Edit</button>
+                    <button class="btn btn-danger" @onclick="ConfirmCreate" disabled="@isSubmitting">Yes, create event</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Post-creation confirmation modal *@
+@if (showConfirmation)
+{
+    <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1050;background-color:rgba(0,0,0,.5)"></div>
+    <div class="d-flex align-items-center justify-content-center" style="position:fixed;inset:0;z-index:1060;">
+        <div class="card shadow-sm" style="max-width:520px;width:100%;">
+            <div class="card-body">
+                <h5 class="card-title">Event created</h5>
+                <p class="card-text mb-3">Your event <strong>@(Title)</strong> was created for <strong>@(SocietyName ?? "")</strong>.</p>
+                <div class="d-flex justify-content-end gap-2">
+                    <NavLink class="btn btn-outline-secondary" href="/Events" @onclick="OnNavClicked">Back to events</NavLink>
+                    <NavLink class="btn btn-primary" href="@($"/Events/{createdSlug}")" @onclick="OnNavClicked">View event</NavLink>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int SocietyId { get; set; }
+
+    string? SocietyName;
+    string Title { get; set; } = "";
+    string Text { get; set; } = "";
+
+    // explicit backing field for event date/time
+    DateTime? _eventDate;
+
+    string EventDateString
+    {
+        get => _eventDate.HasValue ? _eventDate.Value.ToString("yyyy-MM-ddTHH:mm") : "";
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                _eventDate = null;
+            }
+            else if (DateTime.TryParse(value, out var dt))
+            {
+                _eventDate = dt;
+            }
+            else
+            {
+                _eventDate = null;
+            }
+        }
+    }
+
+    string Location { get; set; } = "";
+
+    bool isSubmitting = false;
+    string? errorMessage;
+    int CurrentUserId = 1;
+
+    // validation messages
+    string? titleError;
+    string? textError;
+    string? dateError;
+    string? locationError;
+
+    // Confirmation modal state
+    bool showConfirmDetails = false;
+    bool showConfirmation = false;
+    string createdSlug = "";
+    bool hasNavigated = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
+                if (int.TryParse(id, out var parsed)) CurrentUserId = parsed;
+            }
+
+            var sd = await SocietyService.GetSocietyAsync(SocietyId);
+            SocietyName = sd?.Name ?? "Unknown society";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Failed to initialize create event form.";
+        }
+    }
+
+    void OnEventDateChanged(ChangeEventArgs e)
+    {
+        EventDateString = e.Value?.ToString() ?? "";
+    }
+
+    void ClearValidation()
+    {
+        titleError = textError = dateError = locationError = null;
+    }
+
+    bool ValidateInputs()
+    {
+        ClearValidation();
+        var ok = true;
+
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            titleError = "Title is required.";
+            ok = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(Text))
+        {
+            textError = "Description is required.";
+            ok = false;
+        }
+
+        if (!_eventDate.HasValue)
+        {
+            dateError = "Event date & time is required.";
+            ok = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(Location))
+        {
+            locationError = "Location is required.";
+            ok = false;
+        }
+
+        return ok;
+    }
+
+    // initial create click: validate and show final confirmation
+    void OnCreateClicked()
+    {
+        errorMessage = null;
+        if (!ValidateInputs())
+        {
+            return;
+        }
+
+        showConfirmDetails = true;
+    }
+
+    // final confirmation: actually create
+    async Task ConfirmCreate()
+    {
+        showConfirmDetails = false;
+        isSubmitting = true;
+        try
+        {
+            var req = new EventCreateRequest
+            {
+                SocietyId = SocietyId,
+                Title = Title,
+                Text = Text,
+                EventDate = _eventDate,
+                Location = Location,
+                CreatedByUserId = CurrentUserId
+            };
+
+            createdSlug = await EventService.CreateEventAsync(req);
+
+            // show post-creation confirmation modal
+            showConfirmation = true;
+
+            // auto-redirect back to events after 3s if user doesn't navigate elsewhere
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                if (!hasNavigated)
+                {
+                    hasNavigated = true;
+                    await InvokeAsync(() => NavigationManager.NavigateTo("/Events"));
+                }
+            });
+        }
+        catch (Exception)
+        {
+            errorMessage = "Failed to create event. Try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    void OnNavClicked(MouseEventArgs _)
+    {
+        // mark navigation so auto-redirect won't race
+        hasNavigated = true;
+    }
+
+    // kept for backward compatibility but not required when using NavLink
+    void BackToEvents()
+    {
+        if (hasNavigated) return;
+        hasNavigated = true;
+        NavigationManager.NavigateTo("/Events");
+    }
+
+    void ViewEvent()
+    {
+        if (hasNavigated) return;
+        hasNavigated = true;
+        NavigationManager.NavigateTo($"/Events/{createdSlug}");
+    }
+}

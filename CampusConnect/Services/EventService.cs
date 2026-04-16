@@ -6,6 +6,7 @@ using CampusConnect.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace CampusConnect.Services
 {
@@ -520,6 +521,71 @@ ORDER BY COALESCE(p.EventDate, p.PostTime) DESC;
             }
 
             return list;
+        }
+
+        // New: create event implementation
+        public async Task<string> CreateEventAsync(EventCreateRequest request, CancellationToken cancellationToken = default)
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            // generate slug and ensure uniqueness
+            var baseSlug = Slugify(request.Title);
+            var slug = baseSlug;
+            try
+            {
+                await using var conn = CreateConnection();
+                await conn.OpenAsync(cancellationToken);
+
+                // ensure slug unique
+                var suffix = 1;
+                while (true)
+                {
+                    const string checkSql = "SELECT 1 FROM Posts WHERE lower(EventSlug) = lower(@slug) LIMIT 1;";
+                    await using var checkCmd = new SqliteCommand(checkSql, conn);
+                    checkCmd.Parameters.AddWithValue("@slug", slug);
+                    var exists = false;
+                    await using (var rdr = await checkCmd.ExecuteReaderAsync(cancellationToken))
+                    {
+                        exists = await rdr.ReadAsync(cancellationToken);
+                    }
+
+                    if (!exists) break;
+                    slug = $"{baseSlug}-{suffix++}";
+                }
+
+                const string insertSql = @"
+INSERT INTO Posts (SocietyID, Title, Text, PostTime, EventDate, Location, EventSlug)
+VALUES (@societyId, @title, @text, @postTime, @eventDate, @location, @slug);
+SELECT last_insert_rowid();
+";
+                await using var insertCmd = new SqliteCommand(insertSql, conn);
+                insertCmd.Parameters.AddWithValue("@societyId", request.SocietyId.HasValue ? (object)request.SocietyId.Value : DBNull.Value);
+                insertCmd.Parameters.AddWithValue("@title", request.Title ?? "");
+                insertCmd.Parameters.AddWithValue("@text", request.Text ?? "");
+                insertCmd.Parameters.AddWithValue("@postTime", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                insertCmd.Parameters.AddWithValue("@eventDate", request.EventDate.HasValue ? (object)request.EventDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : DBNull.Value);
+                insertCmd.Parameters.AddWithValue("@location", request.Location ?? "");
+                insertCmd.Parameters.AddWithValue("@slug", slug ?? "");
+                var scalar = await insertCmd.ExecuteScalarAsync(cancellationToken);
+                // scalar is last_insert_rowid()
+                return slug;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CreateEventAsync failed for Title {Title}", request.Title);
+                throw;
+            }
+        }
+
+        private static string Slugify(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return Guid.NewGuid().ToString("n").Substring(0, 8);
+            value = value.ToLowerInvariant().Trim();
+            // remove invalid chars
+            value = Regex.Replace(value, @"[^\w\s-]", "");
+            // normalize spaces/hyphens
+            value = Regex.Replace(value, @"\s+", "-");
+            value = Regex.Replace(value, @"-+", "-");
+            return value;
         }
     }
 }

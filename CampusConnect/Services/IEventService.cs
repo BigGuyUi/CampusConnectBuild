@@ -18,5 +18,8 @@ namespace CampusConnect.Services
         // User-specific lists
         Task<List<EventDto>> GetUserRsvpdEventsAsync(int userId, CancellationToken cancellationToken = default);
         Task<List<EventDto>> GetUserLikedEventsAsync(int userId, CancellationToken cancellationToken = default);
+
+        // Create new event and return slug for navigation
+        Task<string> CreateEventAsync(EventCreateRequest request, CancellationToken cancellationToken = default);
     }
 }

@@ -1,0 +1,106 @@
+@page "/Events/Create"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using CampusConnect.Models
+@using CampusConnect.Services
+@inject ISocietyService SocietyService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create Event — Pick Society</PageTitle>
+
+<div class="container py-3">
+    <header class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h2 class="mb-0">Create Event</h2>
+            <div class="text-muted small">Select the society you want to create an event for.</div>
+        </div>
+        <div>
+            <NavLink class="btn btn-outline-secondary btn-sm" href="/Events">Back to Events</NavLink>
+        </div>
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-4 text-muted">Loading…</div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    else
+    {
+        @if (!UserSocieties.Any())
+        {
+            <div class="alert alert-info">You are not a member of any societies. Join a society before creating events.</div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var s in UserSocieties)
+                {
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-start">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;font-weight:600;">
+                                        @GetInitials(s.Name)
+                                    </div>
+                                    <div class="flex-fill">
+                                        <div class="h6 mb-1">@s.Name</div>
+                                        <div class="text-muted small">@s.MemberCount member(s) • @s.PostCount post(s)</div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 ms-auto">
+                                    <NavLink class="btn btn-sm btn-primary" href="@($"/Events/Create/{s.Id}")">Create event for this society</NavLink>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    List<SocietyDto> UserSocieties = new();
+    bool isLoading = false;
+    string? errorMessage;
+    int CurrentUserId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
+                if (int.TryParse(id, out var parsed)) CurrentUserId = parsed;
+            }
+
+            UserSocieties = await SocietyService.GetUserSocietiesAsync(CurrentUserId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load your societies.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+}
