@@ -1,5 +1,4 @@
 @using Microsoft.AspNetCore.Components
-@inject NavigationManager Nav
 
 <div class="event-card">
     <article class="card event-card-inner h-100">
@@ -28,7 +27,7 @@
             }
 
             <div class="mt-auto d-flex justify-content-between align-items-center">
-                <a class="btn btn-sm btn-outline-dark" href="@($"/Events/{EventId}")" role="button" @onclick="NavigateToDetails" @onclick:preventDefault="true">View</a>
+                <NavLink class="btn btn-sm btn-outline-dark" href="@GetEventHref()">View</NavLink>
                 <div class="event-actions text-muted small">Details ?</div>
             </div>
         </div>
@@ -40,14 +39,55 @@
     [Parameter, EditorRequired] public string Date { get; set; } = "";
     [Parameter] public string SocietyName { get; set; } = "";
     [Parameter] public int EventId { get; set; }
+    [Parameter] public string Slug { get; set; } = "";
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    void NavigateToDetails()
+    string GetEventHref()
     {
-        if (EventId > 0)
+        var slug = GetSlug();
+        return !string.IsNullOrWhiteSpace(slug) ? $"/Events/{slug}" : $"/Events/{EventId}";
+    }
+
+    string GetSlug()
+    {
+        if (!string.IsNullOrWhiteSpace(Slug))
+            return Slug;
+
+        // fallback: generate a simple URL-safe slug from the title
+        return Slugify(Title);
+    }
+
+    // Simple slugify: lower-case, replace spaces with '-', remove invalid chars, collapse multiple '-'
+    string Slugify(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return "";
+
+        input = input.Trim().ToLowerInvariant();
+
+        var sb = new System.Text.StringBuilder(input.Length);
+        bool lastWasDash = false;
+        foreach (var ch in input)
         {
-            Nav.NavigateTo($"/Events/{EventId}");
+            if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9'))
+            {
+                sb.Append(ch);
+                lastWasDash = false;
+            }
+            else if (ch == ' ' || ch == '-' || ch == '_' )
+            {
+                if (!lastWasDash)
+                {
+                    sb.Append('-');
+                    lastWasDash = true;
+                }
+            }
+            // ignore punctuation and other chars
         }
+
+        var slug = sb.ToString().Trim('-');
+        // collapse multiple dashes (defensive)
+        while (slug.Contains("--")) slug = slug.Replace("--", "-");
+        return slug;
     }
 
     // Simple initials used in thumb
@@ -62,12 +102,13 @@
     // Generate a consistent accent gradient per EventId (falls back to a neutral gradient)
     string GetThumbStyle()
     {
-        // deterministic color selection
-        var seeds = new[] { "#FF8A65", "#4DB6AC", "#81D4FA", "#FFD54F", "#B39DDB", "#90A4AE" };
-        if (EventId <= 0) return "background: linear-gradient(135deg,#e9eef6,#f7fbff);";
-        var idx = Math.Abs(EventId.GetHashCode()) % seeds.Length;
-        var c1 = seeds[idx];
-        var c2 = seeds[(idx + 2) % seeds.Length];
-        return $"background: linear-gradient(135deg,{c1}, {c2});";
+        var colors = new[] {
+            "linear-gradient(135deg,#ef4444 0%,#fb923c 100%)",
+            "linear-gradient(135deg,#8b5cf6 0%,#06b6d4 100%)",
+            "linear-gradient(135deg,#06b6d4 0%,#10b981 100%)",
+            "linear-gradient(135deg,#f59e0b 0%,#ef4444 100%)"
+        };
+        var idx = EventId > 0 ? Math.Abs(EventId.GetHashCode()) % colors.Length : 0;
+        return $"background:{colors[idx]};min-height:72px;display:flex;align-items:center;justify-content:center;";
     }
 }

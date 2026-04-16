@@ -20,6 +20,7 @@ builder.Services.AddRazorComponents()
 // Register services
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<ISocietyService, SocietyService>();
 
 var app = builder.Build();
 

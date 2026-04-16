@@ -1,0 +1,120 @@
+@page "/Societies/{SocietyId:int}"
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using CampusConnect.Models
+@using CampusConnect.Services
+@inject ISocietyService SocietyService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Society</PageTitle>
+
+@if (isLoading)
+{
+    <div>Loading...</div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-danger">Error: @errorMessage</div>
+}
+else if (Society is null)
+{
+    <div>Society not found.</div>
+}
+else
+{
+    <header class="mb-3 d-flex justify-content-between align-items-start">
+        <div>
+            <h2>@Society.Name</h2>
+            <div class="text-muted">@Society.MemberCount member(s) • @Society.PostCount post(s)</div>
+        </div>
+        <div>
+            <NavLink class="btn btn-link me-2" href="/Societies">Back</NavLink>
+            @if (IsMember)
+            {
+                <button class="btn btn-outline-secondary" disabled>Member</button>
+            }
+        </div>
+    </header>
+
+    <section class="mb-4">
+        <h5>Members</h5>
+        @if (!Society.Members.Any())
+        {
+            <div class="text-muted">No members</div>
+        }
+        else
+        {
+            <ul class="list-unstyled">
+                @foreach (var m in Society.Members)
+                {
+                    <li>@m.Name</li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section>
+        <h5>Posts</h5>
+        @if (!Society.Posts.Any())
+        {
+            <div class="text-muted">No posts</div>
+        }
+        else
+        {
+            @foreach (var p in Society.Posts)
+            {
+                <article class="mb-3">
+                    <div class="fw-bold">@p.Title</div>
+                    <div class="text-muted" style="font-size:12px;">@p.PostTime.ToLocalTime().ToString("g")</div>
+                    <div>@p.Text</div>
+                </article>
+            }
+        }
+    </section>
+}
+
+@code {
+    [Parameter]
+    public int SocietyId { get; set; }
+
+    SocietyDetailDto? Society;
+    bool isLoading = false;
+    string? errorMessage;
+    int CurrentUserId = 0;
+    bool IsMember = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = user.FindFirst(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+                if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                {
+                    CurrentUserId = uid;
+                }
+            }
+
+            Society = await SocietyService.GetSocietyAsync(SocietyId);
+            if (Society != null)
+            {
+                IsMember = Society.Members.Exists(m => m.Id == CurrentUserId);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

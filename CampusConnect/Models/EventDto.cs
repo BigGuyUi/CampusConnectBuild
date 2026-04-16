@@ -11,8 +11,21 @@ namespace CampusConnect.Models
         public string Text { get; set; } = "";
         public DateTime PostTime { get; set; }
 
-        public string DateDisplay => PostTime == DateTime.MinValue
-            ? ""
-            : PostTime.ToLocalTime().ToString("d MMM");
+        // New: dedicated event date/time and location + counters
+        public DateTime? EventDate { get; set; }
+        public string Location { get; set; } = "";
+        public string Slug { get; set; } = "";
+        public int LikeCount { get; set; }
+        public int ReservationCount { get; set; }
+
+        // Prefer showing the event date for display; fallback to post time
+        public string DateDisplay
+        {
+            get
+            {
+                var dt = EventDate ?? (PostTime == DateTime.MinValue ? (DateTime?)null : PostTime);
+                return dt is null ? "" : dt.Value.ToLocalTime().ToString("d MMM");
+            }
+        }
     }
 }

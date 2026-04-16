@@ -1,0 +1,82 @@
+/* Societies — enhanced card grid, search, avatars, join UI */
+
+.societies-root {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Search input */
+input[placeholder="Search societies..."] {
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid rgba(15,23,42,0.06);
+    min-width: 220px;
+    transition: box-shadow 140ms ease, border-color 140ms ease;
+}
+input[placeholder="Search societies..."]:focus {
+    box-shadow: 0 8px 22px rgba(99,102,241,0.08);
+    border-color: rgba(99,102,241,0.7);
+}
+
+/* Card visual */
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+    border: 1px solid rgba(16,24,40,0.04);
+    background: linear-gradient(180deg,#ffffff 0%, #fbfdff 100%);
+}
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 36px rgba(11, 20, 40, 0.07);
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 140px;
+}
+
+/* Avatar style */
+.card .rounded-circle {
+    width: 52px;
+    height: 52px;
+    font-weight: 700;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: linear-gradient(135deg, #ef4444 0%, #fb923c 100%);
+    box-shadow: 0 6px 18px rgba(239,68,68,0.10);
+}
+
+/* Small meta text */
+.card .text-muted.small {
+    font-size: 0.82rem;
+    color: rgba(15, 23, 42, 0.6);
+}
+
+/* Join input sizing */
+input[id^="join-input-"] {
+    min-width: 140px;
+    max-width: 260px;
+    border-radius: 8px;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid rgba(15,23,42,0.06);
+}
+
+/* Buttons */
+.btn-sm {
+    padding: 0.36rem 0.7rem;
+    font-size: 0.85rem;
+}
+
+/* Card action alignment */
+.card .mt-3 { margin-top: auto !important; }
+
+/* Responsive tweaks */
+@media (min-width: 992px) {
+    .card.h-100 { min-height: 160px; }
+}

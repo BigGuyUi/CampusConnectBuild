@@ -1,0 +1,181 @@
+@page "/Events/MyEvents"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using CampusConnect.Models
+@using CampusConnect.Services
+@inject IEventService EventService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>My Events</PageTitle>
+
+<div class="container py-3">
+    <header class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h2 class="mb-0">My Events</h2>
+            <div class="text-muted small">Events you RSVPd to and events you liked</div>
+        </div>
+
+        <div>
+            <NavLink class="btn btn-outline-secondary btn-sm me-2" href="/Events">Back to Events</NavLink>
+            <button class="btn btn-sm btn-outline-primary" @onclick="Refresh" disabled="@isLoading">Refresh</button>
+        </div>
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-4 text-muted">Loading…</div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    else
+    {
+        <section class="mb-4">
+            <h5>RSVP'd Events</h5>
+            @if (!Rsvpd.Any())
+            {
+                <div class="text-muted">You have no RSVPs.</div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var e in Rsvpd)
+                    {
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body d-flex flex-column">
+                                    <EventCard EventId="@e.Id" Slug="@e.Slug" Title="@e.Title" Date="@e.DateDisplay" SocietyName="@e.SocietyName" />
+                                    <div class="mt-2 d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ToggleRsvp(e.Id)" disabled="@isActionRunning">Cancel RSVP</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section>
+            <h5>Liked Events</h5>
+            @if (!Liked.Any())
+            {
+                <div class="text-muted">You have not liked any events.</div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var e in Liked)
+                    {
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body d-flex flex-column">
+                                    <EventCard EventId="@e.Id" Slug="@e.Slug" Title="@e.Title" Date="@e.DateDisplay" SocietyName="@e.SocietyName" />
+                                    <div class="mt-2 d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ToggleLike(e.Id)" disabled="@isActionRunning">Unlike</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    List<EventDto> Rsvpd = new();
+    List<EventDto> Liked = new();
+    bool isLoading = false;
+    string? errorMessage;
+    int CurrentUserId = 1; // dev fallback; overridden when authenticated
+    bool isActionRunning = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = user.FindFirst(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+                if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                    CurrentUserId = uid;
+            }
+
+            if (CurrentUserId > 0)
+            {
+                Rsvpd = await EventService.GetUserRsvpdEventsAsync(CurrentUserId);
+                Liked = await EventService.GetUserLikedEventsAsync(CurrentUserId);
+            }
+            else
+            {
+                Rsvpd = new List<EventDto>();
+                Liked = new List<EventDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    async Task Refresh()
+    {
+        await LoadAsync();
+    }
+
+    async Task ToggleRsvp(int eventId)
+    {
+        if (isActionRunning) return;
+        isActionRunning = true;
+        try
+        {
+            await EventService.RsvpEventAsync(eventId, CurrentUserId);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isActionRunning = false;
+        }
+    }
+
+    async Task ToggleLike(int eventId)
+    {
+        if (isActionRunning) return;
+        isActionRunning = true;
+        try
+        {
+            await EventService.LikeEventAsync(eventId, CurrentUserId);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isActionRunning = false;
+        }
+    }
+}

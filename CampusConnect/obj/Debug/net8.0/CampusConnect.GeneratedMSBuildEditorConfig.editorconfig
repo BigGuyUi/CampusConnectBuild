@@ -38,6 +38,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/MyEvents.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNeUV2ZW50cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Notifications.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xOb3RpZmljYXRpb25zLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -46,8 +50,8 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR0aW5ncy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Societies.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTb2NpZXRpZXMucmF6b3I=
+[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/SocietyDetails.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTb2NpZXR5RGV0YWlscy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Routes.razor]
@@ -77,6 +81,14 @@ build_metadata.AdditionalFiles.CssScope = b-7e4mdio4ma
 [C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Events.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-cqcufkf9sc
+
+[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/MySocieties.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNeVNvY2lldGllcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-hvsukgq2kc
+
+[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Societies.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTb2NpZXRpZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-x98cup8mqa
 
 [C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Shared/EventCard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRXZlbnRDYXJkLnJhem9y

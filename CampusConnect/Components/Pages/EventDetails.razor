@@ -1,7 +1,12 @@
-@page "/Events/{EventId:int}"
+﻿@page "/Events/{slug}"
+@rendermode InteractiveServer
 @using CampusConnect.Models
 @using CampusConnect.Services
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components
 @inject IEventService EventService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
 
 <PageTitle>Event Details</PageTitle>
@@ -11,7 +16,7 @@
     {
         <div class="d-flex align-items-center gap-2">
             <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
-            <div>Loading�</div>
+            <div>Loading…</div>
         </div>
     }
     else if (loadError is not null)
@@ -20,21 +25,21 @@
             <strong>Error:</strong> @loadError
         </div>
 
-        <button class="btn btn-secondary" @onclick="GoBack">Back to events</button>
+        <NavLink class="btn btn-secondary" href="/Events">Back to events</NavLink>
     }
     else if (evt is null)
     {
         <div class="text-center text-muted py-5">
             <h4>No event found</h4>
             <p class="mb-4">The event may have been removed or doesn't exist.</p>
-            <button class="btn btn-secondary" @onclick="GoBack">Back to events</button>
+            <NavLink class="btn btn-secondary" href="/Events">Back to events</NavLink>
         </div>
     }
     else
     {
         <div class="row gx-4">
             <div class="col-12">
-                <button class="btn btn-link p-0 mb-3" @onclick="GoBack">? Back to events</button>
+                <NavLink class="btn btn-link p-0 mb-3" href="/Events">← Back to events</NavLink>
             </div>
 
             <div class="col-md-8">
@@ -66,8 +71,14 @@
                         <h5 class="h6 mb-3">Event Info</h5>
 
                         <dl class="row mb-3">
+                            <dt class="col-4 text-muted small">When</dt>
+                            <dd class="col-8 small mb-1">@((evt.EventDate ?? evt.PostTime).ToLocalTime().ToString("f"))</dd>
+
+                            <dt class="col-4 text-muted small">Where</dt>
+                            <dd class="col-8 small mb-1">@evt.Location</dd>
+
                             <dt class="col-4 text-muted small">Posted</dt>
-                            <dd class="col-8 small mb-1">@evt.DateDisplay</dd>
+                            <dd class="col-8 small mb-1">@evt.PostTime.ToLocalTime().ToString("g")</dd>
 
                             @if (evt.SocietyId is int sid)
                             {
@@ -78,8 +89,19 @@
                             }
                         </dl>
 
+                        <div class="mb-3">
+                            <div class="d-flex gap-2">
+                                @* Only disable while an action runs *@
+                                <button class="btn btn-outline-secondary w-50" @onclick="OnLikeClicked" disabled="@isActionRunning">
+                                    ❤️ Like (@evt.LikeCount)
+                                </button>
+                                <button class="btn btn-primary w-50" @onclick="OnRsvpClicked" disabled="@isActionRunning">
+                                    ✅ RSVP (@evt.ReservationCount)
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="mt-auto d-flex gap-2">
-                            <button class="btn btn-primary w-100" @onclick="OnRsvpClicked">RSVP</button>
                             <button class="btn btn-outline-secondary w-100" @onclick="Share">Share</button>
                         </div>
                     </div>
@@ -91,17 +113,41 @@
 
 @code {
     [Parameter]
-    public int EventId { get; set; }
+    public string slug { get; set; } = "";
 
     EventDto? evt;
     bool isLoading = true;
     string? loadError;
+    // DEV: default to user 1 for testing; will be overwritten when authenticated
+    int CurrentUserId = 1;
+    bool isActionRunning = false;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            evt = await EventService.GetEventAsync(EventId);
+            // determine user id if authenticated (overwrite the dev fallback)
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = user.FindFirst(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+                if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                {
+                    CurrentUserId = uid;
+                }
+            }
+
+            // load event by slug
+            if (!string.IsNullOrWhiteSpace(slug))
+            {
+                evt = await EventService.GetEventBySlugAsync(slug);
+            }
+
+            if (evt is null)
+            {
+                loadError = "Event not found";
+            }
         }
         catch (Exception ex)
         {
@@ -113,26 +159,57 @@
         }
     }
 
-    void GoBack() => Nav.NavigateTo("/Events");
-
-    void OnRsvpClicked()
+    async Task OnRsvpClicked()
     {
-        // placeholder � replace with RSVP flow/navigation as required
-        Nav.NavigateTo($"/Events/{EventId}#rsvp");
+        if (isActionRunning) return;
+
+        isActionRunning = true;
+        try
+        {
+            await EventService.RsvpEventAsync(evt!.Id, CurrentUserId);
+            evt = await EventService.GetEventAsync(evt.Id);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            isActionRunning = false;
+        }
+    }
+
+    async Task OnLikeClicked()
+    {
+        if (isActionRunning) return;
+
+        isActionRunning = true;
+        try
+        {
+            await EventService.LikeEventAsync(evt!.Id, CurrentUserId);
+            evt = await EventService.GetEventAsync(evt.Id);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            isActionRunning = false;
+        }
     }
 
     void Share()
     {
         try
         {
-            var url = Nav.ToAbsoluteUri($"/Events/{EventId}").ToString();
-            // Try Web Share API via JS if available (progressive enhancement)
-            // fallback: copy to clipboard via navigator.clipboard (not included here)
+            var url = Nav.ToAbsoluteUri($"/Events/{slug}").ToString();
             Nav.NavigateTo(url, forceLoad: true);
         }
         catch
         {
-            // best-effort; do nothing on failure
         }
     }
 }

@@ -24,7 +24,7 @@
             </div>
             <div class="actions">
                 <button class="btn btn-outline-primary">Create Event</button>
-                <button class="btn btn-outline-secondary">Make Announcement</button>
+                <NavLink class="btn btn-outline-secondary" href="/Events/MyEvents">My Events</NavLink>
             </div>
         </div>
     </header>
@@ -33,7 +33,7 @@
         <div class="events-grid">
             @foreach (var evt in FilteredEvents)
             {
-                <EventCard EventId="@evt.Id" Title="@evt.Title" Date="@evt.DateDisplay" SocietyName="@evt.SocietyName" />
+                <EventCard EventId="@evt.Id" Slug="@evt.Slug" Title="@evt.Title" Date="@evt.DateDisplay" SocietyName="@evt.SocietyName" />
             }
         </div>
 

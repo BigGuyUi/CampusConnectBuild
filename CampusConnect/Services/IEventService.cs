@@ -9,5 +9,14 @@ namespace CampusConnect.Services
     {
         Task<List<EventDto>> GetEventsAsync(CancellationToken cancellationToken = default);
         Task<EventDto?> GetEventAsync(int id, CancellationToken cancellationToken = default);
+        Task<EventDto?> GetEventBySlugAsync(string slug, CancellationToken cancellationToken = default);
+
+        // Updated: include userId for per-user toggle behavior
+        Task<bool> LikeEventAsync(int eventId, int userId, CancellationToken cancellationToken = default);
+        Task<bool> RsvpEventAsync(int eventId, int userId, CancellationToken cancellationToken = default);
+
+        // User-specific lists
+        Task<List<EventDto>> GetUserRsvpdEventsAsync(int userId, CancellationToken cancellationToken = default);
+        Task<List<EventDto>> GetUserLikedEventsAsync(int userId, CancellationToken cancellationToken = default);
     }
 }

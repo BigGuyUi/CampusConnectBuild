@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.SQLite;
 using System.IO;
+using System.Collections.Generic;
 
 namespace CampusConnect
 {
@@ -84,6 +85,11 @@ CREATE TABLE IF NOT EXISTS Posts (
     Text TEXT,
     Image BLOB,
     PostTime TEXT,
+    EventDate TEXT,
+    Location TEXT,
+    LikeCount INTEGER DEFAULT 0,
+    ReservationCount INTEGER DEFAULT 0,
+    EventSlug TEXT DEFAULT '',
     FOREIGN KEY (SocietyID) REFERENCES Societies(SocietyID)
 );
 
@@ -121,6 +127,25 @@ CREATE TABLE IF NOT EXISTS Messages (
     FOREIGN KEY (ChatID) REFERENCES Chats(ChatID),
     FOREIGN KEY (UserID) REFERENCES Users(UserID)
 );
+
+CREATE TABLE IF NOT EXISTS EventLikes (
+    LikeID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PostID INTEGER,
+    UserID INTEGER,
+    CreatedAt TEXT,
+    FOREIGN KEY (PostID) REFERENCES Posts(PostID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+-- New: Bookings table for RSVPs / reservations
+CREATE TABLE IF NOT EXISTS Bookings (
+    BookingID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PostID INTEGER NOT NULL,
+    UserID INTEGER NOT NULL,
+    CreatedAt TEXT,
+    FOREIGN KEY (PostID) REFERENCES Posts(PostID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
 ";
                     // Execute each statement separately to avoid multi-statement quirks
                     foreach (var statement in createSql.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
@@ -131,6 +156,41 @@ CREATE TABLE IF NOT EXISTS Messages (
 
                         cmd.CommandText = s + ";";
                         cmd.ExecuteNonQuery();
+                    }
+
+                    // Ensure Posts table has new columns (for upgrades on existing DB)
+                    var requiredColumns = new Dictionary<string, string>
+                    {
+                        { "EventDate", "TEXT" },
+                        { "Location", "TEXT DEFAULT ''" },
+                        { "LikeCount", "INTEGER DEFAULT 0" },
+                        { "ReservationCount", "INTEGER DEFAULT 0" },
+                        { "EventSlug", "TEXT DEFAULT ''" }
+                    };
+
+                    using (var colCmd = connection.CreateCommand())
+                    {
+                        colCmd.CommandText = "PRAGMA table_info('Posts');";
+                        var existingCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        using (var rdr = colCmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                existingCols.Add(rdr.GetString(1));
+                            }
+                        }
+
+                        foreach (var kv in requiredColumns)
+                        {
+                            if (!existingCols.Contains(kv.Key))
+                            {
+                                using (var alter = connection.CreateCommand())
+                                {
+                                    alter.CommandText = $"ALTER TABLE Posts ADD COLUMN {kv.Key} {kv.Value};";
+                                    alter.ExecuteNonQuery();
+                                }
+                            }
+                        }
                     }
 
                     // Seed data only if Users table is empty
@@ -185,19 +245,19 @@ INSERT INTO Admins (UserID, SocietyID) VALUES
 ";
                         cmd.ExecuteNonQuery();
 
-                        // Posts - using SQLite datetime expressions to simulate GETDATE() - N days
+                        // Posts - include EventDate, Location, counts and slug
                         cmd.CommandText = @"
-INSERT INTO Posts (SocietyID, Title, Text, Image, PostTime) VALUES
-(1,'Welcome','Welcome to CS Society!',NULL, datetime('now','-3 days')),
-(1,'Event','CS coding night this Friday!',NULL, datetime('now','-1 days')),
-(2,'Auditions','Drama auditions open!',NULL, datetime('now','-2 days')),
-(2,'Workshop','Acting workshop on Saturday.',NULL, datetime('now','-1 days')),
-(3,'Tournament','Gaming 1v1 tournament.',NULL, datetime('now','-4 days')),
-(3,'LAN Party','LAN party planned soon.',NULL, datetime('now','-1 days')),
-(4,'Hike','Weekend hiking trip!',NULL, datetime('now','-5 days')),
-(4,'Reminder','Bring boots.',NULL, datetime('now','-1 days')),
-(5,'Photo Walk','Photography walk this week.',NULL, datetime('now','-3 days')),
-(5,'Competition','Submit your best shots!',NULL, datetime('now','-1 days'));
+INSERT INTO Posts (SocietyID, Title, Text, Image, PostTime, EventDate, Location, LikeCount, ReservationCount, EventSlug) VALUES
+(1,'Welcome','Welcome to CS Society!',NULL, datetime('now','-3 days'), datetime('now','+7 days'), 'Room A, Building 1', 0, 0, lower(replace('Welcome',' ','-'))),
+(1,'Event','CS coding night this Friday!',NULL, datetime('now','-1 days'), datetime('now','+4 days'), 'Lab 2', 0, 0, lower(replace('Event',' ','-'))),
+(2,'Auditions','Drama auditions open!',NULL, datetime('now','-2 days'), datetime('now','+10 days'), 'Auditorium', 0, 0, lower(replace('Auditions',' ','-'))),
+(2,'Workshop','Acting workshop on Saturday.',NULL, datetime('now','-1 days'), datetime('now','+6 days'), 'Studio 3', 0, 0, lower(replace('Workshop',' ','-'))),
+(3,'Tournament','Gaming 1v1 tournament.',NULL, datetime('now','-4 days'), datetime('now','+12 days'), 'Gaming Lounge', 0, 0, lower(replace('Tournament',' ','-'))),
+(3,'LAN Party','LAN party planned soon.',NULL, datetime('now','-1 days'), datetime('now','+7 days'), 'Common Room', 0, 0, lower(replace('LAN Party',' ','-'))),
+(4,'Hike','Weekend hiking trip!',NULL, datetime('now','-5 days'), datetime('now','+9 days'), 'National Park Entrance', 0, 0, lower(replace('Hike',' ','-'))),
+(4,'Reminder','Bring boots.',NULL, datetime('now','-1 days'), datetime('now','+9 days'), 'Trailhead', 0, 0, lower(replace('Reminder',' ','-'))),
+(5,'Photo Walk','Photography walk this week.',NULL, datetime('now','-3 days'), datetime('now','+3 days'), 'Riverside', 0, 0, lower(replace('Photo Walk',' ','-'))),
+(5,'Competition','Submit your best shots!',NULL, datetime('now','-1 days'), datetime('now','+14 days'), 'Gallery Hall', 0, 0, lower(replace('Competition',' ','-')));
 ";
                         cmd.ExecuteNonQuery();
 
@@ -262,9 +322,67 @@ INSERT INTO Messages (ChatID, UserID, Text, Image, PostTime) VALUES
 (5,8,'Taking pics!',NULL, datetime('now'));
 ";
                         cmd.ExecuteNonQuery();
+
+                        // After seeding Posts, ensure EventSlug computed from Title
+                        using (var slugCmd = connection.CreateCommand())
+                        {
+                            slugCmd.CommandText = "UPDATE Posts SET EventSlug = lower(replace(Title,' ','-')) WHERE EventSlug IS NULL OR EventSlug = '';";
+
+                            slugCmd.ExecuteNonQuery();
+                        }
                     }
 
                     transaction.Commit();
+                }
+
+                // Final safety: ensure EventLikes and Bookings tables exist for upgraded DBs
+                using (var check = connection.CreateCommand())
+                {
+                    check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('EventLikes','Bookings');";
+                    var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    using (var rdr = check.ExecuteReader())
+                    {
+                        while (rdr.Read())
+                        {
+                            found.Add(rdr.GetString(0));
+                        }
+                    }
+
+                    if (!found.Contains("EventLikes"))
+                    {
+                        using (var create = connection.CreateCommand())
+                        {
+                            create.CommandText = @"
+CREATE TABLE IF NOT EXISTS EventLikes (
+    LikeID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PostID INTEGER,
+    UserID INTEGER,
+    CreatedAt TEXT,
+    FOREIGN KEY (PostID) REFERENCES Posts(PostID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+";
+                            create.ExecuteNonQuery();
+                        }
+                    }
+
+                    if (!found.Contains("Bookings"))
+                    {
+                        using (var create = connection.CreateCommand())
+                        {
+                            create.CommandText = @"
+CREATE TABLE IF NOT EXISTS Bookings (
+    BookingID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PostID INTEGER NOT NULL,
+    UserID INTEGER NOT NULL,
+    CreatedAt TEXT,
+    FOREIGN KEY (PostID) REFERENCES Posts(PostID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+";
+                            create.ExecuteNonQuery();
+                        }
+                    }
                 }
             }
         }
