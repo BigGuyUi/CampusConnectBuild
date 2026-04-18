@@ -3,8 +3,61 @@ using CampusConnect;
 using CampusConnect.Components;
 using CampusConnect.Services;
 using Microsoft.Data.Sqlite;
+using System.IO;
 
-var builder = WebApplication.CreateBuilder(args);
+string? ResolveWebRootFromEnvOrArgs(string[] args)
+{
+    // Prefer explicit --webroot=path or env var ASPNETCORE_WEBROOT
+    string? fromEnv = Environment.GetEnvironmentVariable("ASPNETCORE_WEBROOT");
+    if (!string.IsNullOrWhiteSpace(fromEnv))
+        return fromEnv;
+
+    foreach (var a in args)
+    {
+        if (a.StartsWith("--webroot=", StringComparison.OrdinalIgnoreCase))
+            return a.Substring("--webroot=".Length).Trim('"');
+    }
+
+    return null;
+}
+
+var argsArray = args ?? Array.Empty<string>();
+var candidate = ResolveWebRootFromEnvOrArgs(argsArray);
+
+// Only use the candidate if the directory actually exists; otherwise let the host pick the default
+string? safeWebRoot = null;
+if (!string.IsNullOrWhiteSpace(candidate))
+{
+    try
+    {
+        if (Path.IsPathRooted(candidate))
+        {
+            if (Directory.Exists(candidate))
+                safeWebRoot = candidate;
+            else
+                Console.WriteLine($"Warning: requested web root '{candidate}' does not exist; ignoring.");
+        }
+        else
+        {
+            // relative -> resolve against current directory
+            var resolved = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), candidate));
+            if (Directory.Exists(resolved))
+                safeWebRoot = resolved;
+            else
+                Console.WriteLine($"Warning: requested web root '{resolved}' does not exist; ignoring.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: error validating web root '{candidate}': {ex.Message}; ignoring.");
+    }
+}
+
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = argsArray,
+    WebRootPath = safeWebRoot
+});
 
 // initialize DB using connection string from configuration
 var sqliteConn = builder.Configuration.GetConnectionString("DefaultConnection")
