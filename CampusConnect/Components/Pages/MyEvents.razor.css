@@ -1,0 +1,54 @@
+/* Horizontal feeds, each a horizontally scrollable row of full-size cards */
+
+.my-events-feeds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+/* Column wrapper to keep header + scroller together */
+.feed-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header at top of each column */
+.feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Horizontal list: full-size cards arranged left-to-right with horizontal scroll */
+.horizontal-list {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+}
+
+/* Each item keeps its intrinsic card size — do not force smaller sizes */
+.h-item {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    max-width: 92%; /* optional to keep card from overflowing tiny screens */
+}
+
+/* action buttons under each card */
+.h-item .mt-2 { margin-top: .5rem; }
+
+/* Responsive: single column on narrow viewports */
+@media (max-width: 992px) {
+    .my-events-feeds {
+        grid-template-columns: 1fr;
+    }
+    .horizontal-list {
+        gap: .75rem;
+    }
+    .h-item { max-width: 100%; }
+}

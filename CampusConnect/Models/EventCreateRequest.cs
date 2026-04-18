@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace CampusConnect.Models
 {
@@ -10,5 +11,8 @@ namespace CampusConnect.Models
         public DateTime? EventDate { get; set; }
         public string Location { get; set; } = "";
         public int CreatedByUserId { get; set; }
+
+        // Now: submit tag IDs selected from the stored list
+        public List<int> TagIds { get; set; } = new();
     }
 }

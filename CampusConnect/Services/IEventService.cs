@@ -7,11 +7,11 @@ namespace CampusConnect.Services
 {
     public interface IEventService
     {
-        Task<List<EventDto>> GetEventsAsync(CancellationToken cancellationToken = default);
+        Task<List<EventDto>> GetEventsAsync(int? userId = null, CancellationToken cancellationToken = default);
         Task<EventDto?> GetEventAsync(int id, CancellationToken cancellationToken = default);
         Task<EventDto?> GetEventBySlugAsync(string slug, CancellationToken cancellationToken = default);
 
-        // Updated: include userId for per-user toggle behavior
+        // Per-user toggle behavior
         Task<bool> LikeEventAsync(int eventId, int userId, CancellationToken cancellationToken = default);
         Task<bool> RsvpEventAsync(int eventId, int userId, CancellationToken cancellationToken = default);
 
@@ -21,5 +21,15 @@ namespace CampusConnect.Services
 
         // Create new event and return slug for navigation
         Task<string> CreateEventAsync(EventCreateRequest request, CancellationToken cancellationToken = default);
+
+        // Tags
+        Task<List<TagDto>> GetAllTagsAsync(CancellationToken cancellationToken = default);
+
+        // New: record first view by user (only increments once per user) and helpers
+        Task RecordViewAsync(int eventId, int userId, CancellationToken cancellationToken = default);
+        Task<bool> IsEventLikedByUserAsync(int eventId, int userId, CancellationToken cancellationToken = default);
+
+        // New: check if a specific user has viewed an event
+        Task<bool> IsEventViewedByUserAsync(int eventId, int userId, CancellationToken cancellationToken = default);
     }
 }

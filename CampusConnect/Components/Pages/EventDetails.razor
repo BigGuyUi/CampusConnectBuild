@@ -6,10 +6,29 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components
 @inject IEventService EventService
-@inject AuthenticationStateProvider AuthStateProvider
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
 
 <PageTitle>Event Details</PageTitle>
+
+<style>
+    .heart-btn {
+        border: 0;
+        background: transparent;
+        font-size: 1.05rem;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: color .12s ease, background .12s ease;
+        color: #6b7280;
+    }
+    .heart-btn:hover { background: rgba(0,0,0,0.04); }
+    .heart-btn.liked { color: #e11d48; } /* pinkish-red */
+
+    /* attendance dots inside details */
+    .att-dots { display:inline-block; margin-right:8px; vertical-align:middle; }
+    .att-dots .dot { width:12px; height:12px; border-radius:50%; background:#06b6d4; border:2px solid #fff; margin-left:-6px; box-shadow:0 6px 18px rgba(6,182,212,0.12); display:inline-block; }
+    .att-legend { font-weight:700; color: rgba(15,23,42,0.85); margin-left:8px; }
+</style>
 
 <div class="container py-4">
     @if (isLoading)
@@ -56,10 +75,37 @@
                             <small class="text-muted">@evt.DateDisplay</small>
                         </div>
 
+                        @if (evt.Tags is not null && evt.Tags.Any())
+                        {
+                            <div class="mb-3">
+                                @foreach (var t in evt.Tags)
+                                {
+                                    <span class="badge bg-light text-dark me-1">@t.Name</span>
+                                }
+                            </div>
+                        }
+
                         <hr />
 
                         <div class="event-body" style="white-space:pre-wrap;">
                             @((MarkupString)evt.Text)
+                        </div>
+
+                        @* Controls moved here: Like (heart only), RSVP (with count), Share *@
+                        <div class="mt-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="heart-btn @(isLiked ? "liked" : "")" @onclick="OnLikeClicked" disabled="@isActionRunning" aria-pressed="@isLiked" aria-label="Like">
+                                    @(isLiked ? "❤️" : "🤍")
+                                </button>
+
+                                <button class="btn btn-primary" @onclick="OnRsvpClicked" disabled="@isActionRunning" aria-label="RSVP">
+                                    ✅ RSVP (@evt.ReservationCount)
+                                </button>
+
+                                <button class="btn btn-outline-secondary ms-2" @onclick="Share" aria-label="Share">
+                                    Share
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </article>
@@ -87,23 +133,21 @@
                                     <a href="@($"/Societies/{sid}")" class="text-decoration-none">@evt.SocietyName</a>
                                 </dd>
                             }
+
+                            @* Attending row moved under Event Info *@
+                            <dt class="col-4 text-muted small">Attending</dt>
+                            <dd class="col-8 small mb-1">
+                                <span class="att-dots" aria-hidden="true">
+                                    @for (int i = 0; i < Math.Min(5, evt.ReservationCount); i++)
+                                    {
+                                        <span class="dot"></span>
+                                    }
+                                </span>
+                                <span class="att-legend">@evt.ReservationCount attending</span>
+                            </dd>
                         </dl>
 
-                        <div class="mb-3">
-                            <div class="d-flex gap-2">
-                                @* Only disable while an action runs *@
-                                <button class="btn btn-outline-secondary w-50" @onclick="OnLikeClicked" disabled="@isActionRunning">
-                                    ❤️ Like (@evt.LikeCount)
-                                </button>
-                                <button class="btn btn-primary w-50" @onclick="OnRsvpClicked" disabled="@isActionRunning">
-                                    ✅ RSVP (@evt.ReservationCount)
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="mt-auto d-flex gap-2">
-                            <button class="btn btn-outline-secondary w-100" @onclick="Share">Share</button>
-                        </div>
+                        <div class="mt-auto"></div>
                     </div>
                 </div>
             </aside>
@@ -118,27 +162,25 @@
     EventDto? evt;
     bool isLoading = true;
     string? loadError;
-    // DEV: default to user 1 for testing; will be overwritten when authenticated
     int CurrentUserId = 1;
     bool isActionRunning = false;
+    bool isLiked = false;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // determine user id if authenticated (overwrite the dev fallback)
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = auth.User;
             if (user.Identity?.IsAuthenticated == true)
             {
-                var idClaim = user.FindFirst(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+                var idClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
                 if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
                 {
                     CurrentUserId = uid;
                 }
             }
 
-            // load event by slug
             if (!string.IsNullOrWhiteSpace(slug))
             {
                 evt = await EventService.GetEventBySlugAsync(slug);
@@ -147,6 +189,27 @@
             if (evt is null)
             {
                 loadError = "Event not found";
+            }
+            else
+            {
+                // record view for authenticated users (only counts first view per user)
+                if (CurrentUserId > 0)
+                {
+                    try
+                    {
+                        await EventService.RecordViewAsync(evt.Id, CurrentUserId);
+                    }
+                    catch
+                    {
+                        // ignore view recording errors
+                    }
+
+                    // refresh counts and viewed state
+                    evt = await EventService.GetEventAsync(evt.Id);
+
+                    // get like state for this user
+                    isLiked = await EventService.IsEventLikedByUserAsync(evt.Id, CurrentUserId);
+                }
             }
         }
         catch (Exception ex)
@@ -162,7 +225,6 @@
     async Task OnRsvpClicked()
     {
         if (isActionRunning) return;
-
         isActionRunning = true;
         try
         {
@@ -183,11 +245,10 @@
     async Task OnLikeClicked()
     {
         if (isActionRunning) return;
-
         isActionRunning = true;
         try
         {
-            await EventService.LikeEventAsync(evt!.Id, CurrentUserId);
+            isLiked = await EventService.LikeEventAsync(evt!.Id, CurrentUserId);
             evt = await EventService.GetEventAsync(evt.Id);
             StateHasChanged();
         }

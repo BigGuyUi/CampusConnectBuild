@@ -5,7 +5,7 @@
 @using CampusConnect.Models
 @using CampusConnect.Services
 @inject IEventService EventService
-@inject AuthenticationStateProvider AuthStateProvider
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
 <PageTitle>My Events</PageTitle>
@@ -33,57 +33,85 @@
     }
     else
     {
-        <section class="mb-4">
-            <h5>RSVP'd Events</h5>
-            @if (!Rsvpd.Any())
-            {
-                <div class="text-muted">You have no RSVPs.</div>
-            }
-            else
-            {
-                <div class="row g-3">
-                    @foreach (var e in Rsvpd)
-                    {
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body d-flex flex-column">
-                                    <EventCard EventId="@e.Id" Slug="@e.Slug" Title="@e.Title" Date="@e.DateDisplay" SocietyName="@e.SocietyName" />
-                                    <div class="mt-2 d-flex gap-2">
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ToggleRsvp(e.Id)" disabled="@isActionRunning">Cancel RSVP</button>
-                                    </div>
-                                </div>
-                            </div>
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="mb-0">RSVP'd Events</h5>
+                            <small class="text-muted">@Rsvpd.Count</small>
                         </div>
-                    }
-                </div>
-            }
-        </section>
 
-        <section>
-            <h5>Liked Events</h5>
-            @if (!Liked.Any())
-            {
-                <div class="text-muted">You have not liked any events.</div>
-            }
-            else
-            {
-                <div class="row g-3">
-                    @foreach (var e in Liked)
-                    {
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body d-flex flex-column">
-                                    <EventCard EventId="@e.Id" Slug="@e.Slug" Title="@e.Title" Date="@e.DateDisplay" SocietyName="@e.SocietyName" />
-                                    <div class="mt-2 d-flex gap-2">
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ToggleLike(e.Id)" disabled="@isActionRunning">Unlike</button>
-                                    </div>
+                        <div class="mini-grid overflow-auto">
+                            @if (!Rsvpd.Any())
+                            {
+                                <div class="text-muted p-3">You have no RSVPs.</div>
+                            }
+                            else
+                            {
+                                <div class="row g-3">
+                                    @foreach (var e in Rsvpd)
+                                    {
+                                        <div class="col-12 col-md-6">
+                                            <MiniEventCard EventId="@e.Id"
+                                                           Slug="@e.Slug"
+                                                           Title="@e.Title"
+                                                           Date="@e.DateDisplay"
+                                                           SocietyName="@e.SocietyName"
+                                                           Tags="@e.Tags"
+                                                           Description="@e.Text"
+                                                           LikeCount="@e.LikeCount"
+                                                           ViewCount="@e.ViewCount"
+                                                           IsRsvpd="true"
+                                                           IsViewed="@e.IsViewed" />
+                                        </div>
+                                    }
                                 </div>
-                            </div>
+                            }
                         </div>
-                    }
+                    </div>
                 </div>
-            }
-        </section>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="mb-0">Liked Events</h5>
+                            <small class="text-muted">@Liked.Count</small>
+                        </div>
+
+                        <div class="mini-grid overflow-auto">
+                            @if (!Liked.Any())
+                            {
+                                <div class="text-muted p-3">You have not liked any events.</div>
+                            }
+                            else
+                            {
+                                <div class="row g-3">
+                                    @foreach (var e in Liked)
+                                    {
+                                        <div class="col-12 col-md-6">
+                                            <MiniEventCard EventId="@e.Id"
+                                                           Slug="@e.Slug"
+                                                           Title="@e.Title"
+                                                           Date="@e.DateDisplay"
+                                                           SocietyName="@e.SocietyName"
+                                                           Tags="@e.Tags"
+                                                           Description="@e.Text"
+                                                           LikeCount="@e.LikeCount"
+                                                           ViewCount="@e.ViewCount"
+                                                           IsLiked="true"
+                                                           IsViewed="@e.IsViewed" />
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 </div>
 
@@ -119,6 +147,22 @@
             {
                 Rsvpd = await EventService.GetUserRsvpdEventsAsync(CurrentUserId);
                 Liked = await EventService.GetUserLikedEventsAsync(CurrentUserId);
+
+                // fetch per-event viewed flag in parallel
+                var tasks = new List<Task>();
+                foreach (var e in Rsvpd)
+                {
+                    tasks.Add(SetViewedFlagAsync(e));
+                }
+                foreach (var e in Liked)
+                {
+                    // avoid duplicate check if same event appears in both lists
+                    if (!Rsvpd.Exists(x => x.Id == e.Id))
+                        tasks.Add(SetViewedFlagAsync(e));
+                    else
+                        e.IsViewed = Rsvpd.Find(x => x.Id == e.Id).IsViewed;
+                }
+                await Task.WhenAll(tasks);
             }
             else
             {
@@ -136,46 +180,20 @@
         }
     }
 
+    async Task SetViewedFlagAsync(EventDto e)
+    {
+        try
+        {
+            e.IsViewed = await EventService.IsEventViewedByUserAsync(e.Id, CurrentUserId);
+        }
+        catch
+        {
+            e.IsViewed = false;
+        }
+    }
+
     async Task Refresh()
     {
         await LoadAsync();
-    }
-
-    async Task ToggleRsvp(int eventId)
-    {
-        if (isActionRunning) return;
-        isActionRunning = true;
-        try
-        {
-            await EventService.RsvpEventAsync(eventId, CurrentUserId);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-        }
-        finally
-        {
-            isActionRunning = false;
-        }
-    }
-
-    async Task ToggleLike(int eventId)
-    {
-        if (isActionRunning) return;
-        isActionRunning = true;
-        try
-        {
-            await EventService.LikeEventAsync(eventId, CurrentUserId);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-        }
-        finally
-        {
-            isActionRunning = false;
-        }
     }
 }

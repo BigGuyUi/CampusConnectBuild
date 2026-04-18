@@ -6,9 +6,11 @@
 @using CampusConnect.Models
 @using CampusConnect.Services
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
 
 @inject IEventService EventService
 @inject NavigationManager NavigationManager
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Events</PageTitle>
 
@@ -34,17 +36,29 @@
         <div class="events-grid">
             @foreach (var evt in FilteredEvents)
             {
-                <EventCard EventId="@evt.Id" Slug="@evt.Slug" Title="@evt.Title" Date="@evt.DateDisplay" SocietyName="@evt.SocietyName" />
+                <div class="mb-2">
+                    <EventCard EventId="@evt.Id"
+                               Slug="@evt.Slug"
+                               Title="@evt.Title"
+                               Date="@evt.DateDisplay"
+                               SocietyName="@evt.SocietyName"
+                               Tags="@evt.Tags"
+                               Description="@evt.Text"
+                               LikeCount="@evt.LikeCount"
+                               ViewCount="@evt.ViewCount"
+                               IsLiked="@evt.IsLiked"
+                               IsViewed="@evt.IsViewed" />
+                </div>
+            }
+
+            @if (!FilteredEvents.Any())
+            {
+                <div class="empty-state">
+                    <h4>No events found</h4>
+                    <p class="text-muted">Try adjusting your search or check back later.</p>
+                </div>
             }
         </div>
-
-        @if (!FilteredEvents.Any())
-        {
-            <div class="empty-state">
-                <h4>No events found</h4>
-                <p class="text-muted">Try adjusting your search or check back later.</p>
-            </div>
-        }
     </section>
 </div>
 
@@ -52,13 +66,23 @@
     string SearchQuery { get; set; } = "";
     List<EventDto> Eventss { get; set; } = new List<EventDto>();
 
+    int? CurrentUserId = null;
+
     IEnumerable<EventDto> FilteredEvents =>
         string.IsNullOrWhiteSpace(SearchQuery)
             ? Eventss
-            : Eventss.Where(e => e.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || (e.SocietyName ?? "").Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+            : Eventss.Where(e => e.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || (e.SocietyName ?? "").Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || (e.Tags != null && e.Tags.Any(t => t.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))));
 
     protected override async Task OnInitializedAsync()
     {
-        Eventss = await EventService.GetEventsAsync();
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated == true)
+        {
+            var idClaim = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier) ?? auth.User.FindFirst("sub");
+            if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                CurrentUserId = uid;
+        }
+
+        Eventss = await EventService.GetEventsAsync(CurrentUserId);
     }
 }

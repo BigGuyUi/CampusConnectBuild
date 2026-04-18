@@ -1,88 +1,419 @@
-.event-card { width: 100%; }
+/* Feed-style horizontal card — clickable whole card */
 
-.event-card-inner {
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 0.75rem;
-  border-radius: 8px;
-  overflow: hidden;
-  transition: box-shadow .12s ease;
-  border: 1px solid rgba(15,23,42,0.03);
-  background: #ffffff;
+/* Ensure NavLink wrapper behaves as block */
+.event-row-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
 }
 
-/* Subtle hover only — no lift or heavy shadow */
-.event-card-inner:hover {
-  box-shadow: 0 4px 10px rgba(10, 35, 80, 0.04);
+/* Use CSS Grid so the bottom tags bar sits only at the card bottom */
+.event-row {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr auto; /* header / body / tags */
+    gap: 1rem;
+    align-items: start;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(16,24,40,0.06);
+    background: linear-gradient(180deg,#ffffff 0%, #fbfdff 100%);
+    transition: transform 140ms ease, box-shadow 140ms ease;
+    padding: 0;
+    min-height: 260px;
+    cursor: pointer;
+    box-sizing: border-box;
 }
 
-.event-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 64px;
-  height: 100%;
-  color: #04233f;
-  font-weight: 700;
-  font-size: 14px;
-  padding: 6px;
+/* Hover / focus */
+.event-row-card:focus .event-row,
+.event-row-card:hover .event-row {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px rgba(11,20,40,0.09);
+    outline: none;
 }
 
-.thumb-text {
-  color: rgba(255,255,255,0.95);
-  font-weight: 700;
-  font-size: 14px;
-  text-shadow: none;
+/* Left hero area spans header + body rows only (stops above tags row to avoid overlap) */
+.event-hero {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3;         /* changed: no longer spans the tags row */
+    align-self: stretch;     /* ensure it fills the rows it occupies */
+    min-width: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    position: relative;
+    background-color: #0f172a;
+    box-sizing: border-box;
+    overflow: hidden;        /* ensure nothing bleeds into the tags bar */
+    z-index: 0;
 }
 
-/* Body */
-.card-body {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* Soft overlay for hero */
+.event-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.12));
+    pointer-events: none;
 }
 
+/* initials shown when no image */
+.hero-initials {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 28px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+    z-index: 1;
+}
+
+/* Content area occupies the right column, first two rows */
+.event-content {
+    grid-column: 2 / -1;
+    grid-row: 1 / 3; /* header + body */
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* Header row: title + society (left) and date (right) */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+/* Slightly increase title and society sizes for emphasis */
 .event-title {
-  font-weight: 600;
-  color: #05233a;
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 1rem;
+    margin: 0;
+    font-size: 1.28rem;
+    font-weight: 800;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.12;
 }
 
-.event-date {
-  color: #6b7280;
-  margin-left: 6px;
-  font-size: 0.85rem;
-}
-
+/* Society next to title */
 .event-society {
-  background: rgba(4, 36, 77, 0.03);
-  color: #05233a;
-  border-radius: 6px;
-  padding: 3px 7px;
-  font-size: 11px;
-  text-transform: uppercase;
+    display: inline-block;
+    background: rgba(4,36,77,0.06);
+    color: #05233a;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    font-weight: 700;
 }
 
-/* Footer */
-.event-actions {
-  opacity: 0.85;
-  font-size: 0.9rem;
+/* Small visual separator between title and society when used inline */
+.sep {
+    color: rgba(15,23,42,0.45);
+    font-weight: 700;
 }
 
-/* Responsive: stack thumb on small screens */
+/* Date moved to the top-right; slightly larger */
+.event-date {
+    color: rgba(15,23,42,0.65);
+    white-space: nowrap;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* Description styling; sits under header inside event-content */
+.event-description {
+    margin-top: 8px;
+    color: #374151;
+    font-size: 0.95rem;
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+/* Any extra block content (in body) */
+.event-extra {
+    color: #334155;
+    margin-top: 12px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+/* Tags row sits in the bottom grid row and spans both columns */
+/* Give tags row a higher stacking context so it always sits above hero visuals if slight bleed occurs */
+.event-tags-row {
+    grid-column: 1 / -1;
+    grid-row: 3 / 4;
+    background: rgba(15,23,42,0.03);
+    border-top: 1px solid rgba(15,23,42,0.04);
+    padding: 10px 22px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    z-index: 2;
+}
+
+/* tags inner stays left */
+.event-tags-inner {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* meta container on the right */
+.event-tags-meta {
+    display: none;
+}
+
+/* individual meta item */
+.meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(15,23,42,0.75);
+    font-weight: 700;
+    font-size: 0.92rem;
+}
+
+/* minimalist SVG icons */
+.icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    color: rgba(15,23,42,0.55);
+    flex: 0 0 16px;
+}
+
+/* ensure svg uses currentColor */
+.icon path,
+.icon circle,
+.icon rect {
+    stroke: currentColor;
+    fill: none;
+}
+
+/* small tweak for heart outline look */
+.icon-heart path {
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+/* counts */
+.meta-count {
+    line-height: 1;
+}
+
+/* Counters moved to top-right next to profile */
+
+/* card-header right-side meta container */
+.meta-top {
+    display: flex;
+    flex-direction: column; /* stack counts above the date */
+    align-items: flex-end;
+    gap: 6px;
+    min-width: 92px;
+    margin-left: 8px;
+}
+
+/* fine-tune date placement when meta-top present */
+.event-date {
+    color: rgba(15,23,42,0.65);
+    white-space: nowrap;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* responsive: collapse meta-top to a single row on small screens */
 @media (max-width: 640px) {
-  .event-card-inner {
-    grid-template-columns: 1fr;
-    grid-template-rows: 64px 1fr;
-  }
+    .meta-top {
+        flex-direction: row;
+        align-items: center;
+    }
 
-  .event-thumb {
-    border-bottom: 1px solid rgba(15,23,42,0.03);
-  }
+    .card-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .event-date {
+        align-self: flex-end;
+    }
+}
+
+/* Small screens: stack hero above content and tags below */
+@media (max-width: 768px) {
+    .event-row {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        min-height: auto;
+    }
+
+    .event-hero {
+        grid-column: 1 / -1;
+        grid-row: 1 / 2;
+        width: 100%;
+        min-height: 160px;
+    }
+
+    .event-content {
+        grid-column: 1 / -1;
+        grid-row: 2 / 3;
+    }
+
+    .event-tags-row {
+        grid-column: 1 / -1;
+        grid-row: 3 / 4;
+    }
+
+    .hero-initials { width: 80px; height: 80px; font-size: 22px; }
+}
+
+/* small screen adjustments: stack header content vertically so date doesn't overlap */
+@media (max-width: 640px) {
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .event-date {
+        align-self: flex-end;
+    }
+}
+
+/* Compact variant for EventCard to fit two-column MyEvents feed */
+
+/* base compact modifier applied on NavLink wrapper (see EventCard.razor) */
+.event-row-card.compact .event-row {
+    min-height: 180px;
+}
+
+.event-row-card.compact .event-hero {
+    flex: 0 0 160px;
+    min-width: 140px;
+}
+
+.event-row-card.compact .hero-initials {
+    width: 64px;
+    height: 64px;
+    font-size: 18px;
+}
+
+.event-row-card.compact .event-content {
+    padding: 12px 14px;
+}
+
+.event-row-card.compact .event-title {
+    font-size: 1.02rem;
+    -webkit-line-clamp: 2;
+}
+
+.event-row-card.compact .event-description {
+    -webkit-line-clamp: 2;
+    font-size: 0.9rem;
+    margin-top: 6px;
+}
+
+/* slightly smaller tags */
+.event-row-card.compact .event-tags-row {
+    padding: 8px 14px;
+}
+.event-row-card.compact .event-tag {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+}
+
+/* keep icons slightly smaller in compact */
+.event-row-card.compact .icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* add unread marker and attendance dot styles (append to file) */
+
+.event-hero { position: relative; }
+
+.unread-dot {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: linear-gradient(180deg,#06b6d4,#0ea5a3);
+    box-shadow: 0 4px 12px rgba(14,165,164,0.18);
+    border: 2px solid #fff;
+    z-index: 5;
+}
+
+/* attendance dots used in card and details */
+.att-dots { position: relative; width: 60px; height: 16px; display: inline-block; margin-right: 8px; }
+.att-dots .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #06b6d4;
+    border: 2px solid #fff;
+    box-shadow: 0 4px 12px rgba(6,182,212,0.12);
+    position: relative;
+    margin-left: -6px;
+}
+.att-count { font-weight:700; font-size:.9rem; color: rgba(15,23,42,0.8); margin-left:6px; }
+
+/* Lit icon states */
+.icon.lit { color: currentColor; }
+.icon-heart.lit { color: #e11d48; } /* liked heart */
+.icon-eye.lit { color: #06b6d4; }   /* viewed eye */
+
+/* smooth color transition for icons */
+.icon {
+    transition: color .14s ease, transform .12s ease, fill .12s ease;
+}
+.icon.lit {
+    transform: scale(1.05);
+}
+
+/* Icon lit states: viewed (eye) = blue, liked (heart) = pink (filled) */
+
+/* viewed eye */
+.icon-eye.lit {
+    color: #06b6d4; /* teal-blue */
+}
+.icon-eye.lit path,
+.icon-eye.lit circle {
+    stroke: currentColor;
+    fill: none;
+}
+
+/* liked heart - stronger pink and fill the heart when liked */
+.icon-heart.lit {
+    color: #e11d48; /* pinkish-red */
+}
+.icon-heart.lit path {
+    stroke: currentColor;
+    fill: currentColor; /* filled heart when lit */
+    stroke-linejoin: round;
+    stroke-linecap: round;
 }

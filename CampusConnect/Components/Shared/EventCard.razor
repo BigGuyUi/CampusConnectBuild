@@ -1,38 +1,99 @@
+﻿@using CampusConnect.Models
 @using Microsoft.AspNetCore.Components
+@inject NavigationManager Nav
+@inject CampusConnect.Services.IEventService EventService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
-<div class="event-card">
-    <article class="card event-card-inner h-100">
-        <div class="event-thumb" style="@GetThumbStyle()">
-            <div class="thumb-text">@GetInitials()</div>
+<NavLink class="@($"event-row-card text-decoration-none{(Compact ? " compact" : "")}")" href="@GetEventHref()">
+    <article class="event-row" role="group" aria-label="@Title">
+        <div class="event-hero" style="@GetThumbStyle()">
+            @if (!string.IsNullOrWhiteSpace(ImageUrl))
+            {
+                <div class="sr-only">Event image</div>
+            }
+            else
+            {
+                <div class="hero-initials">@GetInitials()</div>
+            }
+
+            @* Unread marker for events not yet viewed by the current user *@
+            @if (!LocalIsViewed)
+            {
+                <span class="unread-dot" aria-hidden="true"></span>
+            }
         </div>
 
-        <div class="card-body d-flex flex-column">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <h3 class="card-title h6 mb-0 event-title" title="@Title">@Title</h3>
-                <time class="event-date small text-muted">@Date</time>
+        <div class="event-content">
+            <div class="card-header mb-2">
+                <div class="title-wrap" style="min-width:0;">
+                    <h3 class="event-title" title="@Title">
+                        @Title
+                        @if (!string.IsNullOrWhiteSpace(SocietyName))
+                        {
+                            <span class="sep" aria-hidden="true"> &nbsp;|&nbsp; </span>
+                            <span class="event-society">@SocietyName</span>
+                        }
+                    </h3>
+                </div>
+
+                <div class="meta-top" aria-hidden="true">
+                    <div class="meta-item">
+                        <svg class="icon icon-eye @(LocalIsViewed ? "lit" : "")" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <span class="meta-count">@ViewCount</span>
+                    </div>
+                    <div class="meta-item">
+                        <svg class="icon icon-heart @(LocalIsLiked ? "lit" : "")" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+                            <path d="M20.8 6.6a5.5 5.5 0 0 0-7.8 0L12 7.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path>
+                        </svg>
+                        <span class="meta-count">@LikeCount</span>
+                    </div>
+
+                    @* Attendance tracker visual (non-interactive on card) *@
+                    <div class="attendees" title="@($"{ReservationCount} attending")" aria-hidden="true">
+                        <div class="att-dots">
+                            @for (int i = 0; i < Math.Min(5, ReservationCount); i++)
+                            {
+                                <span class="dot" style="left:@(i * 8)px"></span>
+                            }
+                        </div>
+                        <span class="att-count">@ReservationCount</span>
+                    </div>
+
+                    <time class="event-date small text-muted ms-2">@Date</time>
+                </div>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(SocietyName))
+            @if (!string.IsNullOrWhiteSpace(Description))
             {
-                <div class="mb-2">
-                    <span class="badge event-society">@SocietyName</span>
+                <div class="event-description">
+                    @((MarkupString)Description)
                 </div>
             }
 
             @if (ChildContent is not null)
             {
-                <div class="mb-3 event-extra">
+                <div class="event-extra">
                     @ChildContent
                 </div>
             }
-
-            <div class="mt-auto d-flex justify-content-between align-items-center">
-                <NavLink class="btn btn-sm btn-outline-dark" href="@GetEventHref()">View</NavLink>
-                <div class="event-actions text-muted small">Details ?</div>
-            </div>
         </div>
+
+        @if (Tags is not null && Tags.Any())
+        {
+            <div class="event-tags-row">
+                <div class="event-tags-inner">
+                    @foreach (var t in Tags)
+                    {
+                        <span class="event-tag">@t.Name</span>
+                    }
+                </div>
+            </div>
+        }
     </article>
-</div>
+</NavLink>
 
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = "";
@@ -41,6 +102,61 @@
     [Parameter] public int EventId { get; set; }
     [Parameter] public string Slug { get; set; } = "";
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? ImageUrl { get; set; }
+
+    [Parameter] public List<TagDto>? Tags { get; set; }
+    [Parameter] public string? Description { get; set; }
+
+    // Counters
+    [Parameter] public int LikeCount { get; set; }
+    [Parameter] public int ViewCount { get; set; }
+    [Parameter] public int ReservationCount { get; set; }
+
+    // Optional inputs; when null component will query service for current user
+    [Parameter] public bool? IsLiked { get; set; }
+    [Parameter] public bool? IsViewed { get; set; }
+
+    // Per-component computed flags
+    bool LocalIsLiked = false;
+    bool LocalIsViewed = true;
+    int CurrentUserId = 0;
+
+    [Parameter] public bool Compact { get; set; } = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // default local flags from parameters if provided
+        if (IsLiked.HasValue) LocalIsLiked = IsLiked.Value;
+        if (IsViewed.HasValue) LocalIsViewed = IsViewed.Value;
+
+        // if caller didn't provide per-user info, try to resolve for authenticated user
+        if ((!IsLiked.HasValue || !IsViewed.HasValue) && EventService is not null)
+        {
+            try
+            {
+                var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+                var user = auth.User;
+                if (user.Identity?.IsAuthenticated == true)
+                {
+                    var idClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+                    if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                        CurrentUserId = uid;
+                }
+
+                if (CurrentUserId > 0)
+                {
+                    if (!IsLiked.HasValue)
+                        LocalIsLiked = await EventService.IsEventLikedByUserAsync(EventId, CurrentUserId);
+                    if (!IsViewed.HasValue)
+                        LocalIsViewed = await EventService.IsEventViewedByUserAsync(EventId, CurrentUserId);
+                }
+            }
+            catch
+            {
+                // ignore per-card check failures
+            }
+        }
+    }
 
     string GetEventHref()
     {
@@ -52,18 +168,13 @@
     {
         if (!string.IsNullOrWhiteSpace(Slug))
             return Slug;
-
-        // fallback: generate a simple URL-safe slug from the title
         return Slugify(Title);
     }
 
-    // Simple slugify: lower-case, replace spaces with '-', remove invalid chars, collapse multiple '-'
     string Slugify(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return "";
-
         input = input.Trim().ToLowerInvariant();
-
         var sb = new System.Text.StringBuilder(input.Length);
         bool lastWasDash = false;
         foreach (var ch in input)
@@ -73,7 +184,7 @@
                 sb.Append(ch);
                 lastWasDash = false;
             }
-            else if (ch == ' ' || ch == '-' || ch == '_' )
+            else if (ch == ' ' || ch == '-' || ch == '_')
             {
                 if (!lastWasDash)
                 {
@@ -81,16 +192,12 @@
                     lastWasDash = true;
                 }
             }
-            // ignore punctuation and other chars
         }
-
         var slug = sb.ToString().Trim('-');
-        // collapse multiple dashes (defensive)
         while (slug.Contains("--")) slug = slug.Replace("--", "-");
         return slug;
     }
 
-    // Simple initials used in thumb
     string GetInitials()
     {
         if (string.IsNullOrWhiteSpace(Title)) return "?";
@@ -99,9 +206,13 @@
         return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
     }
 
-    // Generate a consistent accent gradient per EventId (falls back to a neutral gradient)
     string GetThumbStyle()
     {
+        if (!string.IsNullOrWhiteSpace(ImageUrl))
+        {
+            return $"background-image:url('{ImageUrl}');background-size:cover;background-position:center;color:#fff;min-width:260px;display:flex;align-items:center;justify-content:center;";
+        }
+
         var colors = new[] {
             "linear-gradient(135deg,#ef4444 0%,#fb923c 100%)",
             "linear-gradient(135deg,#8b5cf6 0%,#06b6d4 100%)",
@@ -109,6 +220,6 @@
             "linear-gradient(135deg,#f59e0b 0%,#ef4444 100%)"
         };
         var idx = EventId > 0 ? Math.Abs(EventId.GetHashCode()) % colors.Length : 0;
-        return $"background:{colors[idx]};min-height:72px;display:flex;align-items:center;justify-content:center;";
+        return $"background:{colors[idx]};background-size:cover;background-position:center;min-width:260px;display:flex;align-items:center;justify-content:center;";
     }
 }

@@ -1,0 +1,136 @@
+﻿@using CampusConnect.Models
+@using Microsoft.AspNetCore.Components
+
+<NavLink class="mini-card text-decoration-none" href="@GetEventHref()" role="group" aria-label="@Title">
+    <div class="mini-hero" style="@GetThumbStyle()">
+        @if (!string.IsNullOrWhiteSpace(ImageUrl))
+        {
+            <div class="sr-only">Event image</div>
+        }
+        else
+        {
+            <div class="mini-initials">@GetInitials()</div>
+        }
+
+        @if (!IsViewed)
+        {
+            <span class="mini-unread" aria-hidden="true"></span>
+        }
+    </div>
+
+    <div class="mini-content">
+        <div class="mini-top">
+            <div class="mini-title" title="@Title">@Title</div>
+
+            <div class="mini-badges" aria-hidden="true">
+                @if (IsRsvpd)
+                {
+                    <span class="mini-badge mini-badge-rsvp" title="You RSVP'd">RSVP'd</span>
+                }
+                @if (IsLiked)
+                {
+                    <span class="mini-badge mini-badge-liked" title="You liked this">♥</span>
+                }
+            </div>
+        </div>
+
+        <div class="mini-meta">
+            <span class="mini-society">@SocietyName</span>
+            <span class="mini-sep">|</span>
+            <span class="mini-date">@Date</span>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <div class="mini-desc">@((MarkupString)Description)</div>
+        }
+
+        <div class="mini-bottom" aria-hidden="true">
+            <div class="mini-counters" role="group" aria-label="Counters">
+                <svg class="icon icon-eye @(IsViewed ? "lit" : "")" width="14" height="14" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+                    <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span class="count">@ViewCount</span>
+
+                <svg class="icon icon-heart @(IsLiked ? "lit" : "")" width="14" height="14" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+                    <path d="M20.8 6.6a5.5 5.5 0 0 0-7.8 0L12 7.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path>
+                </svg>
+                <span class="count">@LikeCount</span>
+            </div>
+        </div>
+    </div>
+</NavLink>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Date { get; set; } = "";
+    [Parameter] public string SocietyName { get; set; } = "";
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public string Slug { get; set; } = "";
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public List<TagDto>? Tags { get; set; }
+    [Parameter] public int LikeCount { get; set; }
+    [Parameter] public int ViewCount { get; set; }
+
+    // state badges (passed from caller)
+    [Parameter] public bool IsRsvpd { get; set; } = false;
+    [Parameter] public bool IsLiked { get; set; } = false;
+    [Parameter] public bool IsViewed { get; set; } = true;
+
+    string GetEventHref()
+    {
+        var slug = !string.IsNullOrWhiteSpace(Slug) ? Slug : Slugify(Title);
+        return !string.IsNullOrWhiteSpace(slug) ? $"/Events/{slug}" : $"/Events/{EventId}";
+    }
+
+    string Slugify(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return "";
+        input = input.Trim().ToLowerInvariant();
+        var sb = new System.Text.StringBuilder(input.Length);
+        bool lastWasDash = false;
+        foreach (var ch in input)
+        {
+            if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9'))
+            {
+                sb.Append(ch);
+                lastWasDash = false;
+            }
+            else if (ch == ' ' || ch == '-' || ch == '_')
+            {
+                if (!lastWasDash)
+                {
+                    sb.Append('-');
+                    lastWasDash = true;
+                }
+            }
+        }
+        var slug = sb.ToString().Trim('-');
+        while (slug.Contains("--")) slug = slug.Replace("--", "-");
+        return slug;
+    }
+
+    string GetInitials()
+    {
+        if (string.IsNullOrWhiteSpace(Title)) return "?";
+        var parts = Title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+
+    string GetThumbStyle()
+    {
+        if (!string.IsNullOrWhiteSpace(ImageUrl))
+            return $"background-image:url('{ImageUrl}');background-size:cover;background-position:center;";
+        var colors = new[] {
+            "linear-gradient(135deg,#ef4444 0%,#fb923c 100%)",
+            "linear-gradient(135deg,#8b5cf6 0%,#06b6d4 100%)",
+            "linear-gradient(135deg,#06b6d4 0%,#10b981 100%)",
+            "linear-gradient(135deg,#f59e0b 0%,#ef4444 100%)"
+        };
+        var idx = EventId > 0 ? Math.Abs(EventId.GetHashCode()) % colors.Length : 0;
+        return $"background:{colors[idx]};";
+    }
+}

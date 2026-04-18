@@ -95,6 +95,42 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Tags <small class="text-muted">(pick up to 5)</small></label>
+
+                        @if (availableTags is null)
+                        {
+                            <div class="text-muted small">Loading tags…</div>
+                        }
+                        else if (!availableTags.Any())
+                        {
+                            <div class="text-muted small">No tags available.</div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var t in availableTags)
+                                {
+                                    var selected = SelectedTagIds.Contains(t.Id);
+                                    <button type="button"
+                                            class="btn btn-sm @(selected ? "btn-primary" : "btn-outline-secondary")"
+                                            @onclick="() => ToggleTag(t.Id)">
+                                        @t.Name
+                                    </button>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(tagError))
+                            {
+                                <div class="form-text text-danger mt-1">@tagError</div>
+                            }
+                            else
+                            {
+                                <div class="form-text text-muted mt-1">Choose up to 5 tags from the list.</div>
+                            }
+                        }
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary" @onclick="OnCreateClicked" disabled="@isSubmitting">
                             @if (isSubmitting)
@@ -129,6 +165,21 @@
                         <hr />
                         <div class="text-muted small mb-1">Description</div>
                         <div class="preview-description">@((string.IsNullOrWhiteSpace(Text) ? "(No description)" : Text))</div>
+
+                        @if (SelectedTagIds?.Any() == true && availableTags is not null)
+                        {
+                            <hr />
+                            <div class="d-flex gap-2 flex-wrap">
+                                @foreach (var id in SelectedTagIds)
+                                {
+                                    var tag = availableTags.FirstOrDefault(x => x.Id == id);
+                                    if (tag is not null)
+                                    {
+                                        <span class="badge bg-light text-dark">@tag.Name</span>
+                                    }
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -136,7 +187,6 @@
     </div>
 </div>
 
-@* Confirmation: are these details correct? *@
 @if (showConfirmDetails)
 {
     <div class="modal-backdrop fade show"></div>
@@ -176,7 +226,6 @@
     </div>
 }
 
-@* Post-creation confirmation modal *@
 @if (showConfirmation)
 {
     <div class="modal-backdrop fade show"></div>
@@ -207,42 +256,35 @@
     string Title { get; set; } = "";
     string Text { get; set; } = "";
 
-    // explicit backing field for event date/time
     DateTime? _eventDate;
-
     string EventDateString
     {
         get => _eventDate.HasValue ? _eventDate.Value.ToString("yyyy-MM-ddTHH:mm") : "";
         set
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                _eventDate = null;
-            }
-            else if (DateTime.TryParse(value, out var dt))
-            {
-                _eventDate = dt;
-            }
-            else
-            {
-                _eventDate = null;
-            }
+            if (string.IsNullOrWhiteSpace(value)) _eventDate = null;
+            else if (DateTime.TryParse(value, out var dt)) _eventDate = dt;
+            else _eventDate = null;
         }
     }
 
     string Location { get; set; } = "";
 
+    // Tag picker state
+    List<TagDto>? availableTags;
+    List<int> SelectedTagIds { get; set; } = new();
+    const int MaxTags = 5;
+    string? tagError;
+
     bool isSubmitting = false;
     string? errorMessage;
     int CurrentUserId = 1;
 
-    // validation messages
     string? titleError;
     string? textError;
     string? dateError;
     string? locationError;
 
-    // Confirmation modal state
     bool showConfirmDetails = false;
     bool showConfirmation = false;
     string createdSlug = "";
@@ -262,6 +304,9 @@
 
             var sd = await SocietyService.GetSocietyAsync(SocietyId);
             SocietyName = sd?.Name ?? "Unknown society";
+
+            // load available tags for picker
+            availableTags = await EventService.GetAllTagsAsync();
         }
         catch (Exception)
         {
@@ -269,10 +314,25 @@
         }
     }
 
-    void OnEventDateChanged(ChangeEventArgs e)
+    void ToggleTag(int tagId)
     {
-        EventDateString = e.Value?.ToString() ?? "";
+        tagError = null;
+        if (SelectedTagIds.Contains(tagId))
+        {
+            SelectedTagIds.Remove(tagId);
+        }
+        else
+        {
+            if (SelectedTagIds.Count >= MaxTags)
+            {
+                tagError = $"You may select up to {MaxTags} tags.";
+                return;
+            }
+            SelectedTagIds.Add(tagId);
+        }
     }
+
+    void OnEventDateChanged(ChangeEventArgs e) => EventDateString = e.Value?.ToString() ?? "";
 
     void OnTitleInput(ChangeEventArgs e)
     {
@@ -295,10 +355,7 @@
         Location = v;
     }
 
-    void ClearValidation()
-    {
-        titleError = textError = dateError = locationError = null;
-    }
+    void ClearValidation() => titleError = textError = dateError = locationError = null;
 
     bool ValidateInputs()
     {
@@ -351,11 +408,7 @@
     void OnCreateClicked()
     {
         errorMessage = null;
-        if (!ValidateInputs())
-        {
-            return;
-        }
-
+        if (!ValidateInputs()) return;
         showConfirmDetails = true;
     }
 
@@ -373,15 +426,14 @@
                 Text = Text,
                 EventDate = _eventDate,
                 Location = Location,
-                CreatedByUserId = CurrentUserId
+                CreatedByUserId = CurrentUserId,
+                TagIds = SelectedTagIds.Take(MaxTags).ToList()
             };
 
             createdSlug = await EventService.CreateEventAsync(req);
 
-            // show post-creation confirmation modal
             showConfirmation = true;
 
-            // auto-redirect back to events after 3s if user doesn't navigate elsewhere
             _ = Task.Run(async () =>
             {
                 await Task.Delay(3000);
@@ -402,11 +454,7 @@
         }
     }
 
-    void OnNavClicked(MouseEventArgs _)
-    {
-        // mark navigation so auto-redirect won't race
-        hasNavigated = true;
-    }
+    void OnNavClicked(MouseEventArgs _) => hasNavigated = true;
 
     // kept for backward compatibility but not required when using NavLink
     void BackToEvents()

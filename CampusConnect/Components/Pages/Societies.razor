@@ -53,25 +53,25 @@
                     @foreach (var s in FilteredAvailable)
                     {
                         <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body d-flex flex-column">
-                                    <div class="d-flex align-items-start">
-                                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;font-weight:600;">
-                                            @GetInitials(s.Name)
-                                        </div>
-                                        <div class="flex-fill">
-                                            <div class="h6 mb-1">@s.Name</div>
-                                            <div class="text-muted small">@s.MemberCount member(s) • @s.PostCount post(s)</div>
-                                        </div>
+                            <div class="society-card shadow-sm">
+                                <div class="society-card-hero" style="@GetHeroStyle(s.Id)">
+                                    @* Placeholder for a future prominent image. For now show initials *@
+                                    <div class="hero-initials">@GetInitials(s.Name)</div>
+                                </div>
+
+                                <div class="society-card-body d-flex flex-column">
+                                    <div>
+                                        <div class="society-name h5 mb-1">@s.Name</div>
+                                        <div class="text-muted small">@s.MemberCount member(s) • @s.PostCount post(s)</div>
                                     </div>
 
-                                    <div class="mt-3 ms-auto">
+                                    <div class="mt-auto">
                                         @if (JoiningSocietyId == s.Id)
                                         {
                                             <div class="d-flex align-items-center">
                                                 <input id="join-input-@s.Id"
                                                        class="form-control form-control-sm me-2"
-                                                       style="width:180px;"
+                                                       style="width:160px;"
                                                        placeholder="Optional note..."
                                                        @bind="JoinText"
                                                        @bind:event="oninput"
@@ -163,6 +163,20 @@
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
         return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+
+    // New: hero background gradient; reserved for future image overlay
+    string GetHeroStyle(int societyId)
+    {
+        var colors = new[] {
+            "linear-gradient(180deg,#ef4444 0%,#fb923c 100%)",
+            "linear-gradient(180deg,#8b5cf6 0%,#06b6d4 100%)",
+            "linear-gradient(180deg,#06b6d4 0%,#10b981 100%)",
+            "linear-gradient(180deg,#f59e0b 0%,#ef4444 100%)",
+            "linear-gradient(180deg,#ef3b8b 0%,#7c3aed 100%)"
+        };
+        var idx = societyId > 0 ? Math.Abs(societyId.GetHashCode()) % colors.Length : 0;
+        return $"background:{colors[idx]};display:flex;align-items:center;justify-content:center;";
     }
 
     async Task StartJoin(int id)
