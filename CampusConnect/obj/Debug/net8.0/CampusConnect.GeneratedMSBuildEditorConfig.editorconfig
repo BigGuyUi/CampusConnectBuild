@@ -1,7 +1,5 @@
 is_global = true
 build_property.TargetFramework = net8.0
-build_property.TargetFrameworkIdentifier = .NETCoreApp
-build_property.TargetFrameworkVersion = v8.0
 build_property.TargetPlatformMinVersion = 
 build_property.UsingMicrosoftNETSdkWeb = true
 build_property.ProjectTypeGuids = 
@@ -11,97 +9,97 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = CampusConnect
 build_property.RootNamespace = CampusConnect
-build_property.ProjectDir = C:\Users\aiden\Source\Repos\CampusConnectBuild\CampusConnect\
+build_property.ProjectDir = C:\Users\Thomas\Documents\Uni Code\DDD Last Week\CampusConnect\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 8.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = C:\Users\aiden\Source\Repos\CampusConnectBuild\CampusConnect
+build_property.MSBuildProjectDirectory = C:\Users\Thomas\Documents\Uni Code\DDD Last Week\CampusConnect
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 8.0
 build_property.EnableCodeStyleSeverity = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/App.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/App.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Error.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/Error.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/EventDetails.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/EventDetails.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudERldGFpbHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Home.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/Home.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Notifications.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/Notifications.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xOb3RpZmljYXRpb25zLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Settings.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/Settings.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR0aW5ncy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/SocietyDetails.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/SocietyDetails.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTb2NpZXR5RGV0YWlscy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Routes.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Routes.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Shared/Search_Bar.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Shared/Search_Bar.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcU2VhcmNoX0Jhci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/_Imports.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xfSW1wb3J0cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Layout/MainLayout.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Layout/MainLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTWFpbkxheW91dC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-xapf1lnt6k
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Layout/NavMenu.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Layout/NavMenu.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-vthvbfu9u9
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Chats.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/Chats.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDaGF0cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-7e4mdio4ma
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/ChooseEventSociety.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/ChooseEventSociety.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDaG9vc2VFdmVudFNvY2lldHkucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-7o0wy5r73j
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/CreateEvent.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/CreateEvent.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDcmVhdGVFdmVudC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-buxq56tvk5
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Events.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/Events.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-cqcufkf9sc
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/MyEvents.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/MyEvents.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNeUV2ZW50cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-9hjfah34z7
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/MySocieties.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/MySocieties.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNeVNvY2lldGllcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-hvsukgq2kc
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Pages/Societies.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Pages/Societies.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTb2NpZXRpZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-x98cup8mqa
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Shared/EventCard.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Shared/EventCard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRXZlbnRDYXJkLnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-ohd3bidcrj
 
-[C:/Users/aiden/Source/Repos/CampusConnectBuild/CampusConnect/Components/Shared/MiniEventCard.razor]
+[C:/Users/Thomas/Documents/Uni Code/DDD Last Week/CampusConnect/Components/Shared/MiniEventCard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcTWluaUV2ZW50Q2FyZC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-4dsphals0k

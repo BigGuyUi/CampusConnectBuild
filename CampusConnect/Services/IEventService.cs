@@ -31,5 +31,14 @@ namespace CampusConnect.Services
 
         // New: check if a specific user has viewed an event
         Task<bool> IsEventViewedByUserAsync(int eventId, int userId, CancellationToken cancellationToken = default);
+
+        Task<HashSet<int>> GetUserSocietyIdsAsync(int userId, CancellationToken cancellationToken = default);
+
+        Task<List<EventDto>> GetFilteredEventsAsync(
+            int? userId,
+            bool upcomingOnly,
+            bool mySocietiesOnly,
+            CancellationToken cancellationToken = default);
+
     }
 }

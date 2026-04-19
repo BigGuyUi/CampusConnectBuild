@@ -774,5 +774,95 @@ ORDER BY t.Name COLLATE NOCASE;
             value = Regex.Replace(value, @"-+", "-");
             return value;
         }
+
+        public async Task<HashSet<int>> GetUserSocietyIdsAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            const string sql = @"
+SELECT SocietyID
+FROM SocietyMembers
+WHERE UserID = @userId;
+";
+            var ids = new HashSet<int>();
+            try
+            {
+                await using var conn = CreateConnection();
+                await conn.OpenAsync(cancellationToken);
+                await using var cmd = new SqliteCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@userId", userId);
+                await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await rdr.ReadAsync(cancellationToken))
+                {
+                    if (!rdr.IsDBNull(0))
+                        ids.Add(rdr.GetInt32(0));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetUserSocietyIdsAsync failed for user {UserId}", userId);
+                throw;
+            }
+            return ids;
+        }
+
+        public async Task<List<EventDto>> GetFilteredEventsAsync(
+    int? userId,
+    bool upcomingOnly,
+    bool mySocietiesOnly,
+    CancellationToken cancellationToken = default)
+        {
+            var sql = @"
+SELECT p.PostID, p.SocietyID, s.Name AS SocietyName, p.Title, p.Text, p.PostTime,
+       p.EventDate, p.Location, p.EventSlug,
+       COALESCE(p.LikeCount,0) AS LikeCount,
+       COALESCE(p.ReservationCount,0) AS ReservationCount,
+       COALESCE(p.ViewCount,0) AS ViewCount,
+       CASE WHEN @userId IS NOT NULL AND EXISTS(
+            SELECT 1 FROM EventLikes el2 WHERE el2.PostID = p.PostID AND el2.UserID = @userId
+       ) THEN 1 ELSE 0 END AS IsLiked,
+       CASE WHEN @userId IS NOT NULL AND EXISTS(
+            SELECT 1 FROM EventViews ev2 WHERE ev2.PostID = p.PostID AND ev2.UserID = @userId
+       ) THEN 1 ELSE 0 END AS IsViewed
+FROM Posts p
+LEFT JOIN Societies s ON p.SocietyID = s.SocietyID
+WHERE 1=1
+" +
+            (upcomingOnly ? " AND p.EventDate >= @today" : "") +
+            (mySocietiesOnly ? " AND p.SocietyID IN (SELECT SocietyID FROM SocietyMembers WHERE UserID = @userId)" : "") +
+            " ORDER BY COALESCE(p.EventDate, p.PostTime) DESC;";
+
+            var list = new List<EventDto>();
+            await using var conn = CreateConnection();
+            await conn.OpenAsync(cancellationToken);
+
+            await using var cmd = new SqliteCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@userId", userId.HasValue ? (object)userId.Value : DBNull.Value);
+            if (upcomingOnly)
+                cmd.Parameters.AddWithValue("@today", DateTime.Today.ToString("yyyy-MM-dd"));
+
+            await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await rdr.ReadAsync(cancellationToken))
+            {
+                var dto = new EventDto
+                {
+                    Id = rdr.GetInt32(0),
+                    SocietyId = rdr.IsDBNull(1) ? (int?)null : rdr.GetInt32(1),
+                    SocietyName = rdr.IsDBNull(2) ? null : rdr.GetString(2),
+                    Title = rdr.IsDBNull(3) ? "" : rdr.GetString(3),
+                    Text = rdr.IsDBNull(4) ? "" : rdr.GetString(4),
+                    PostTime = rdr.IsDBNull(5) ? DateTime.MinValue : DateTime.Parse(rdr.GetString(5)),
+                    EventDate = rdr.IsDBNull(6) ? (DateTime?)null : DateTime.Parse(rdr.GetString(6)),
+                    Location = rdr.IsDBNull(7) ? "" : rdr.GetString(7),
+                    Slug = rdr.IsDBNull(8) ? "" : rdr.GetString(8),
+                    LikeCount = rdr.IsDBNull(9) ? 0 : rdr.GetInt32(9),
+                    ReservationCount = rdr.IsDBNull(10) ? 0 : rdr.GetInt32(10),
+                    ViewCount = rdr.IsDBNull(11) ? 0 : rdr.GetInt32(11),
+                    IsLiked = !rdr.IsDBNull(12) && rdr.GetInt32(12) == 1,
+                    IsViewed = !rdr.IsDBNull(13) && rdr.GetInt32(13) == 1
+                };
+                dto.Tags = await GetTagsForEventAsync(conn, dto.Id, cancellationToken);
+                list.Add(dto);
+            }
+            return list;
+        }
     }
 }

@@ -26,6 +26,14 @@
                 <input class="search-input" placeholder="Search events..." @bind="SearchQuery" />
             </div>
             <div class="actions">
+                <button class="btn @(ShowUpcomingOnly ? "btn-success" : "btn-outline-primary")"
+                        @onclick="ToggleUpcoming">
+                    Upcoming
+                </button>
+                <button class="btn @(ShowMySocietiesOnly ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="ToggleMySocieties">
+                    My Societies
+                </button>
                 <NavLink class="btn btn-outline-primary" href="/Events/Create">Create Event</NavLink>
                 <NavLink class="btn btn-outline-secondary" href="/Events/MyEvents">My Events</NavLink>
             </div>
@@ -68,21 +76,70 @@
 
     int? CurrentUserId = null;
 
-    IEnumerable<EventDto> FilteredEvents =>
-        string.IsNullOrWhiteSpace(SearchQuery)
-            ? Eventss
-            : Eventss.Where(e => e.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || (e.SocietyName ?? "").Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || (e.Tags != null && e.Tags.Any(t => t.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))));
+    bool ShowUpcomingOnly { get; set; } = false;
+    bool ShowMySocietiesOnly { get; set; } = false;
+    HashSet<int> UserSocietyIds { get; set; } = new();
+
+    //void ToggleUpcoming() => ShowUpcomingOnly = !ShowUpcomingOnly;
+    //void ToggleMySocieties() => ShowMySocietiesOnly = !ShowMySocietiesOnly;
+
+    IEnumerable<EventDto> FilteredEvents
+    {
+        get
+        {
+            var q = Eventss.AsEnumerable();
+
+            if (ShowUpcomingOnly)
+                q = q.Where(e => e.EventDate.HasValue && e.EventDate.Value >= DateTime.Today);
+
+            if (ShowMySocietiesOnly && UserSocietyIds.Count > 0)
+                q = q.Where(e => e.SocietyId.HasValue && UserSocietyIds.Contains(e.SocietyId.Value));
+
+            if (!string.IsNullOrWhiteSpace(SearchQuery))
+                q = q.Where(e =>
+                    e.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    (e.SocietyName ?? "").Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    (e.Tags != null && e.Tags.Any(t => t.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))));
+
+            return q;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
         if (auth.User.Identity?.IsAuthenticated == true)
         {
-            var idClaim = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier) ?? auth.User.FindFirst("sub");
+            var idClaim = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
+                          ?? auth.User.FindFirst("sub");
             if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+            {
                 CurrentUserId = uid;
+                UserSocietyIds = await EventService.GetUserSocietyIdsAsync(uid);
+            }
         }
+        await ReloadEvents();
+    }
 
-        Eventss = await EventService.GetEventsAsync(CurrentUserId);
+    async Task ReloadEvents()
+    {
+        Eventss = await EventService.GetFilteredEventsAsync(
+            CurrentUserId,
+            ShowUpcomingOnly,
+            ShowMySocietiesOnly);
+        StateHasChanged();
+    }
+
+    private async Task ToggleUpcoming()
+    {
+        ShowUpcomingOnly = !ShowUpcomingOnly;
+        await ReloadEvents();
+    }
+
+    private async Task ToggleMySocieties()
+    {
+        if (CurrentUserId == null) return;
+        ShowMySocietiesOnly = !ShowMySocietiesOnly;
+        await ReloadEvents();
     }
 }
