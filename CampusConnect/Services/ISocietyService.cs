@@ -10,6 +10,7 @@ namespace CampusConnect.Services
         Task<List<SocietyDto>> GetAllSocietiesAsync(CancellationToken cancellationToken = default);
         Task<List<SocietyDto>> GetUserSocietiesAsync(int userId, CancellationToken cancellationToken = default);
         Task<bool> JoinSocietyAsync(int userId, int societyId, CancellationToken cancellationToken = default);
+        Task<bool> LeaveSocietyAsync(int userId, int societyId, CancellationToken cancellationToken = default);
         Task<SocietyDetailDto?> GetSocietyAsync(int societyId, CancellationToken cancellationToken = default);
     }
 }

@@ -215,5 +215,29 @@ ORDER BY p.PostTime DESC;
                 throw;
             }
         }
+
+        public async Task<bool> LeaveSocietyAsync(int userId, int societyId, CancellationToken cancellationToken = default)
+        {
+            const string sql = @"
+DELETE FROM SocietyMembers
+WHERE SocietyID = @societyId AND UserID = @userId;
+";
+            try
+            {
+                await using var conn = CreateConnection();
+                await using var cmd = new SqliteCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@societyId", societyId);
+                cmd.Parameters.AddWithValue("@userId", userId);
+
+                await conn.OpenAsync(cancellationToken);
+                var rows = await cmd.ExecuteNonQueryAsync(cancellationToken);
+                return rows > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "LeaveSocietyAsync failed for userId {UserId}, societyId {SocietyId}", userId, societyId);
+                throw;
+            }
+        }
     }
 }

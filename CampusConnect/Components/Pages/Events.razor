@@ -26,14 +26,6 @@
                 <input class="search-input" placeholder="Search events..." @bind="SearchQuery" />
             </div>
             <div class="actions">
-                <button class="btn @(ShowUpcomingOnly ? "btn-success" : "btn-outline-primary")"
-                        @onclick="ToggleUpcoming">
-                    Upcoming
-                </button>
-                <button class="btn @(ShowMySocietiesOnly ? "btn-primary" : "btn-outline-primary")"
-                        @onclick="ToggleMySocieties">
-                    My Societies
-                </button>
                 <NavLink class="btn btn-outline-primary" href="/Events/Create">Create Event</NavLink>
                 <NavLink class="btn btn-outline-secondary" href="/Events/MyEvents">My Events</NavLink>
             </div>
@@ -76,12 +68,7 @@
 
     int? CurrentUserId = null;
 
-    bool ShowUpcomingOnly { get; set; } = false;
-    bool ShowMySocietiesOnly { get; set; } = false;
     HashSet<int> UserSocietyIds { get; set; } = new();
-
-    //void ToggleUpcoming() => ShowUpcomingOnly = !ShowUpcomingOnly;
-    //void ToggleMySocieties() => ShowMySocietiesOnly = !ShowMySocietiesOnly;
 
     IEnumerable<EventDto> FilteredEvents
     {
@@ -89,11 +76,8 @@
         {
             var q = Eventss.AsEnumerable();
 
-            if (ShowUpcomingOnly)
-                q = q.Where(e => e.EventDate.HasValue && e.EventDate.Value >= DateTime.Today);
-
-            if (ShowMySocietiesOnly && UserSocietyIds.Count > 0)
-                q = q.Where(e => e.SocietyId.HasValue && UserSocietyIds.Contains(e.SocietyId.Value));
+            // Always show only events occurring today or in the future
+            q = q.Where(e => e.EventDate.HasValue && e.EventDate.Value.Date >= DateTime.Today);
 
             if (!string.IsNullOrWhiteSpace(SearchQuery))
                 q = q.Where(e =>
@@ -123,23 +107,11 @@
 
     async Task ReloadEvents()
     {
+        // Request upcoming events from the server (today or later)
         Eventss = await EventService.GetFilteredEventsAsync(
             CurrentUserId,
-            ShowUpcomingOnly,
-            ShowMySocietiesOnly);
+            upcomingOnly: true,
+            mySocietiesOnly: false);
         StateHasChanged();
-    }
-
-    private async Task ToggleUpcoming()
-    {
-        ShowUpcomingOnly = !ShowUpcomingOnly;
-        await ReloadEvents();
-    }
-
-    private async Task ToggleMySocieties()
-    {
-        if (CurrentUserId == null) return;
-        ShowMySocietiesOnly = !ShowMySocietiesOnly;
-        await ReloadEvents();
     }
 }
