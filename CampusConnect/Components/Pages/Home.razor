@@ -1,7 +1,210 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@using System
+@using System.Linq
+@using System.Threading.Tasks
+@using CampusConnect.Models
+@using CampusConnect.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IEventService EventService
+@inject ISocietyService SocietyService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>Home</PageTitle>
 
-<h1>Main Menu</h1>
+<div class="home-root container py-4">
+    <header class="home-hero d-flex flex-column flex-md-row align-items-start gap-3 mb-4">
+        <div class="hero-left">
+            <h1 class="hero-title mb-2">Welcome to CampusConnect</h1>
+            <p class="hero-sub text-muted mb-3">Discover events, join societies and stay connected with campus life.</p>
 
-This page will host a feed of events, prompts to join societies, and announcements!
+            <div class="d-flex gap-2">
+                <NavLink class="btn btn-primary btn-lg" href="/Events">Browse Events</NavLink>
+                <NavLink class="btn btn-outline-secondary btn-lg" href="/Societies">Browse Societies</NavLink>
+            </div>
+        </div>
+
+        <div class="hero-right ms-md-auto">
+            <div class="card shadow-sm hero-stats p-3">
+                <div class="stat-title small text-muted">Quick actions</div>
+                <div class="d-flex flex-column gap-2 mt-2">
+                    <NavLink class="btn btn-sm btn-outline-primary" href="/Events/Create">Create event</NavLink>
+                    <NavLink class="btn btn-sm btn-outline-secondary" href="/Societies">Find society</NavLink>
+                    <NavLink class="btn btn-sm btn-outline-secondary" href="/MySocieties">My societies</NavLink>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="section-head d-flex align-items-center justify-content-between mb-2">
+                <h3 class="mb-0">Featured events</h3>
+                <NavLink class="small text-muted" href="/Events">View all</NavLink>
+            </div>
+
+            @if (isLoadingEvents)
+            {
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border" role="status" aria-hidden="true"></div>
+                </div>
+            }
+            else if (!featuredEvents.Any())
+            {
+                <div class="alert alert-info">No featured events — check back later.</div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var evt in featuredEvents)
+                    {
+                        <div class="col-12 col-md-6">
+                            <MiniEventCard EventId="@evt.Id"
+                                           Slug="@evt.Slug"
+                                           Title="@evt.Title"
+                                           Date="@evt.DateDisplay"
+                                           SocietyName="@evt.SocietyName"
+                                           Tags="@evt.Tags"
+                                           Description="@evt.Text"
+                                           LikeCount="@evt.LikeCount"
+                                           ViewCount="@evt.ViewCount"
+                                           IsLiked="@evt.IsLiked"
+                                           IsViewed="@evt.IsViewed" />
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <aside class="col-12 col-lg-4">
+            <div class="section-head d-flex align-items-center justify-content-between mb-2">
+                <h3 class="mb-0">Trending societies</h3>
+                <NavLink class="small text-muted" href="/Societies">View all</NavLink>
+            </div>
+
+            @if (isLoadingSocieties)
+            {
+                <div class="text-center py-3 text-muted">
+                    <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                </div>
+            }
+            else if (!trendingSocieties.Any())
+            {
+                <div class="alert alert-info">No societies to show.</div>
+            }
+            else
+            {
+                <div class="list-group">
+                    @foreach (var s in trendingSocieties)
+                    {
+                        <div class="list-group-item d-flex align-items-center justify-content-between px-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="soc-initials me-2">@GetInitials(s.Name)</div>
+                                <div>
+                                    <div class="fw-bold">@s.Name</div>
+                                    <div class="text-muted small">@($"{s.MemberCount} members • {s.PostCount} posts")</div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <NavLink class="btn btn-sm btn-outline-secondary" href="@($"/Societies/{s.Id}")">Open</NavLink>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="card mt-3 shadow-sm">
+                <div class="card-body">
+                    <h6 class="mb-2">Why join?</h6>
+                    <p class="small text-muted mb-0">Joining societies keeps you informed of events, helps you meet people with shared interests and gives you the ability to post and organise activities.</p>
+                </div>
+            </div>
+        </aside>
+    </section>
+</div>
+
+@code {
+    List<EventDto> featuredEvents = new();
+    List<SocietyDto> trendingSocieties = new();
+
+    bool isLoadingEvents = true;
+    bool isLoadingSocieties = true;
+
+    int CurrentUserId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated == true)
+        {
+            var idClaim = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier) ?? auth.User.FindFirst("sub");
+            if (idClaim != null && int.TryParse(idClaim.Value, out var uid))
+                CurrentUserId = uid;
+        }
+
+        // Load both resources in parallel
+        var eventsTask = LoadFeaturedEventsAsync();
+        var socTask = LoadTrendingSocietiesAsync();
+
+        await Task.WhenAll(eventsTask, socTask);
+    }
+
+    async Task LoadFeaturedEventsAsync()
+    {
+        isLoadingEvents = true;
+        try
+        {
+            // ask server for upcoming events, then take those within the next 14 days and top 4 (smaller, more readable)
+            var allUpcoming = await EventService.GetFilteredEventsAsync(CurrentUserId, upcomingOnly: true, mySocietiesOnly: false);
+            var cutoff = DateTime.Today.AddDays(14);
+            featuredEvents = allUpcoming
+                .Where(e => e.EventDate.HasValue && e.EventDate.Value.Date <= cutoff)
+                .OrderBy(e => e.EventDate)   // soonest first
+                .Take(4)
+                .ToList();
+        }
+        catch
+        {
+            featuredEvents = new List<EventDto>();
+        }
+        finally
+        {
+            isLoadingEvents = false;
+            StateHasChanged();
+        }
+    }
+
+    async Task LoadTrendingSocietiesAsync()
+    {
+        isLoadingSocieties = true;
+        try
+        {
+            var all = await SocietyService.GetAllSocietiesAsync();
+            // trending defined by member count, fallback to post count — top 6
+            trendingSocieties = all
+                .OrderByDescending(s => s.MemberCount)
+                .ThenByDescending(s => s.PostCount)
+                .Take(6)
+                .ToList();
+        }
+        catch
+        {
+            trendingSocieties = new List<SocietyDto>();
+        }
+        finally
+        {
+            isLoadingSocieties = false;
+            StateHasChanged();
+        }
+    }
+
+    string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+}

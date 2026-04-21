@@ -1,0 +1,243 @@
+/* Polished dashboard styles for Home.razor (Blazor CSS isolation) */
+
+/* Theme tokens */
+:root {
+    --brand-600: #0ea5a3;
+    --brand-500: #06b6d4;
+    --muted-700: #374151;
+    --muted-500: #6b7280;
+    --card-bg: #ffffff;
+    --surface: #f8fafc;
+    --radius: 0.6rem;
+    --shadow-sm: 0 6px 18px rgba(2,6,23,0.06);
+}
+
+/* Page container */
+.home-root {
+    background: var(--surface);
+    min-height: calc(100vh - 64px);
+}
+
+/* HERO */
+.home-hero {
+    gap: 1.25rem;
+    align-items: flex-start;
+    display: flex;
+    width: 100%;
+}
+
+.hero-left {
+    max-width: 60ch;
+}
+
+.hero-title {
+    font-size: 1.9rem;
+    margin-bottom: 0.25rem;
+    color: var(--muted-700);
+    letter-spacing: -0.2px;
+}
+
+.hero-sub {
+    color: var(--muted-500);
+    margin-bottom: .75rem;
+    line-height: 1.45;
+}
+
+/* Quick action card on the right */
+.hero-right .hero-stats {
+    min-width: 220px;
+    background: linear-gradient(180deg, #fff, #fbfdff);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(2,6,23,0.04);
+}
+
+.hero-stats .stat-title {
+    font-weight: 600;
+    color: var(--muted-500);
+    font-size: .85rem;
+}
+
+/* CTA sizing */
+.hero-left .btn-lg {
+    padding: .6rem 1.05rem;
+    font-weight: 600;
+}
+
+/* SECTION HEAD */
+.section-head {
+    margin-bottom: .625rem;
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Featured events grid -> contained cards */
+.row.g-3 > .col-md-6 {
+    display: flex;
+}
+
+/* Mini event card (compact, dense, readable) */
+.mini-card {
+    display: flex;
+    gap: .75rem;
+    align-items: start;
+    background: var(--card-bg);
+    border-radius: .6rem;
+    padding: .6rem;
+    border: 1px solid rgba(2,6,23,0.04);
+    min-height: 90px;
+    width: 100%;
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    text-decoration: none;
+    color: inherit;
+}
+.mini-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 36px rgba(2,6,23,0.08);
+    border-color: rgba(2,6,23,0.06);
+}
+
+/* hero image / initials */
+.mini-hero {
+    flex: 0 0 68px;
+    height: 68px;
+    border-radius: .45rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg,var(--brand-500),var(--brand-600));
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+    position: relative;
+    overflow: hidden;
+}
+
+/* unread marker */
+.mini-unread {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    background: #ef4444;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(239,68,68,0.12);
+}
+
+/* content */
+.mini-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+
+.mini-top {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:.5rem;
+}
+
+.mini-title {
+    font-weight: 700;
+    color: var(--muted-700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: .95rem;
+}
+
+.mini-badges {
+    display:flex;
+    gap:.35rem;
+    align-items:center;
+}
+
+.mini-badge {
+    font-size: .65rem;
+    padding: .18rem .4rem;
+    border-radius: .35rem;
+    background: #f1f5f9;
+    color: var(--muted-700);
+}
+
+/* meta row */
+.mini-meta {
+    font-size: .8rem;
+    color: var(--muted-500);
+    display:flex;
+    gap:.4rem;
+    align-items:center;
+}
+
+.mini-desc {
+    color: #4b5563;
+    font-size: .85rem;
+    max-height: 3.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* counters */
+.mini-bottom {
+    display:flex;
+    justify-content: flex-start;
+    gap: .75rem;
+    align-items:center;
+    margin-top: .25rem;
+}
+
+.mini-counters .count {
+    margin-left: .35rem;
+    font-size: .82rem;
+    color: var(--muted-700);
+}
+
+/* Trending societies list */
+.list-group {
+    margin-top:.25rem;
+}
+.list-group-item {
+    border-radius: .55rem;
+    margin-bottom: .5rem;
+    border: 1px solid rgba(2,6,23,0.04);
+    background: var(--card-bg);
+    transition: transform .12s ease, box-shadow .12s ease;
+    padding: .6rem .75rem;
+}
+.list-group-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(2,6,23,0.06);
+}
+
+/* Society initials */
+.soc-initials {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: linear-gradient(180deg,var(--brand-500),var(--brand-600));
+    color: #fff;
+    font-weight: 700;
+}
+
+/* Small utility tweaks */
+.card.mt-3 { border-radius: .6rem; }
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+    .hero-right { order: 2; width: 100%; }
+    .hero-left { order: 1; }
+}
+
+@media (max-width: 575.98px) {
+    .mini-hero { flex: 0 0 56px; height:56px; font-size:.95rem; }
+    .mini-card { padding:.5rem; min-height:78px; }
+    .mini-title { font-size:.9rem; }
+}
