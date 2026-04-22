@@ -10,6 +10,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Extract build artifact
+        run: |
+          powershell -Command "tar -xzf 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\76045f96-54b9-47b9-a861-c7df460861e0.tar.gz' -C 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\'"
+
       - name: Copy to host directory
         run: |
           powershell -Command "Copy-Item -Path 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*' -Destination 'C:\inetpub\wwwroot' -Force"
