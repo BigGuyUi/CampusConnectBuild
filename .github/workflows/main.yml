@@ -9,6 +9,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      -  uses: actions/checkout@v2
-      -  name: Copy to host directory
-         run: powershell Copy-Item -Path "C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*" -Destination "C:\inetpub\wwwroot" -force
+      - uses: actions/checkout@v2
+      - name: Copy to host directory
+        run: |
+          powershell -Command "Copy-Item -Path 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*' -Destination 'C:\inetpub\wwwroot' -Force"
