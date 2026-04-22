@@ -11,4 +11,4 @@ jobs:
     steps:
       -  uses: actions/checkout@v2
       -  name: Copy to host directory
-         run: powershell Copy-Item - Path "C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*" -force
+         run: powershell Copy-Item - Path "C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\*" -force
