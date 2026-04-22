@@ -1,15 +1,23 @@
-name: Push To Windows VM
-
-on:
-  push:
-    branches: [main]
-
 jobs:
   deploy:
     runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v2
-      - name: Copy to host directory
+
+      - name: Extract tar.gz
         run: |
-          powershell -Command "Copy-Item -Path 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*' -Destination 'C:\inetpub\wwwroot' -Force"
+          powershell -Command "
+          if (-not (Test-Path 'C:\actions-runner\_work\CampusConnectBuild\extracted')) {
+              New-Item -ItemType Directory -Path 'C:\actions-runner\_work\CampusConnectBuild\extracted'
+          }
+          tar -xzf 'C:\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\5da52875-7059-4056-bb85-cb3fabcdb6c4.tar.gz' `
+                 -C 'C:\actions-runner\_work\CampusConnectBuild\extracted'
+          "
+
+      - name: Copy to IIS
+        run: |
+          powershell -Command "
+          Copy-Item -Path 'C:\actions-runner\_work\CampusConnectBuild\extracted\*' `
+                    -Destination 'C:\inetpub\wwwroot' -Recurse -Force
+          "
