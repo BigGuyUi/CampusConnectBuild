@@ -1,5 +1,4 @@
 name: Push To Windows VM
-
 on:
   push:
     branches: [main]
@@ -7,14 +6,20 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Extract build artifact
+        shell: powershell
         run: |
-          powershell -Command "tar -xzf 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\76045f96-54b9-47b9-a861-c7df460861e0.tar.gz' -C 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\'"
+          tar -xzf 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\76045f96-54b9-47b9-a861-c7df460861e0.tar.gz' `
+              -C 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\'
 
       - name: Copy to host directory
+        shell: powershell
         run: |
-          powershell -Command "Copy-Item -Path 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*' -Destination 'C:\inetpub\wwwroot' -Force"
+          Copy-Item `
+            -Path 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*' `
+            -Destination 'C:\inetpub\wwwroot' `
+            -Recurse `
+            -Force
