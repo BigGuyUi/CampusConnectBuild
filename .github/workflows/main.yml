@@ -9,17 +9,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract build artifact
+      - name: Check Git        # ← temporary verification step
         shell: powershell
-        run: |
-          tar -xzf 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\76045f96-54b9-47b9-a861-c7df460861e0.tar.gz' `
-              -C 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\'
+        run: git --version
 
       - name: Copy to host directory
         shell: powershell
         run: |
           Copy-Item `
-            -Path 'C:\Windows\System32\actions-runner\actions-runner\_work\CampusConnectBuild\CampusConnectBuild\*' `
-            -Destination 'C:\inetpub\wwwroot' `
+            -Path "$env:GITHUB_WORKSPACE\*" `
+            -Destination "C:\inetpub\wwwroot" `
             -Recurse `
             -Force
